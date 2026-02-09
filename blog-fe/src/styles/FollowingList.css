@@ -1,0 +1,133 @@
+.following-list {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+    margin-bottom: 12px;
+}
+
+.following-list__title {
+    margin: 0 0 8px;
+    font-size: 16px;
+    font-weight: 700;
+    color: #1c1e21;
+    padding: 12px 16px 0;
+}
+
+.following-list__scroll {
+    display: flex;
+    gap: 12px;
+    overflow-x: auto;
+    padding: 8px 16px 12px;
+    scroll-behavior: smooth;
+}
+
+.following-list__scroll::-webkit-scrollbar {
+    height: 6px;
+}
+
+.following-list__scroll::-webkit-scrollbar-track {
+    background: #f0f2f5;
+    border-radius: 3px;
+}
+
+.following-list__scroll::-webkit-scrollbar-thumb {
+    background: #ccc;
+    border-radius: 3px;
+}
+
+.following-list__scroll::-webkit-scrollbar-thumb:hover {
+    background: #999;
+}
+
+.following-list__user {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    min-width: 70px;
+    padding: 8px;
+    background: transparent;
+    border: none;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.following-list__user:hover {
+    background: #f7f8fa;
+    transform: translateY(-2px);
+}
+
+.following-list__user:active {
+    transform: translateY(0);
+}
+
+.following-list__avatar-wrapper {
+    position: relative;
+    width: 60px;
+    height: 60px;
+}
+
+.following-list__avatar {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 3px solid transparent;
+    background: linear-gradient(white, white) padding-box,
+        linear-gradient(135deg, #667eea 0%, #764ba2 100%) border-box;
+    transition: all 0.3s;
+}
+
+.following-list__user:hover .following-list__avatar {
+    border-color: #667eea;
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+.following-list__name {
+    font-size: 12px;
+    font-weight: 500;
+    color: #1c1e21;
+    max-width: 70px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.following-list__loading,
+.following-list__empty {
+    padding: 20px 16px;
+    text-align: center;
+    color: #65676b;
+    font-size: 14px;
+}
+
+.following-list__empty p {
+    margin: 0;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .following-list {
+        padding: 12px;
+    }
+
+    .following-list__title {
+        font-size: 14px;
+    }
+
+    .following-list__avatar-wrapper {
+        width: 50px;
+        height: 50px;
+    }
+
+    .following-list__user {
+        min-width: 60px;
+        padding: 6px;
+    }
+
+    .following-list__name {
+        font-size: 11px;
+        max-width: 60px;
+    }
+}

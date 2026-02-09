@@ -1,0 +1,280 @@
+/* Sidebar.css */
+:root {
+    --sidebar-width-collapsed: 73px;
+    --sidebar-width-expanded: 244px;
+    --sidebar-bg: #0d1117;
+    /* Match main layout bg */
+    --sidebar-hover: #161b22;
+    /* Slightly lighter for hover */
+    --sidebar-active-bg: transparent;
+    --sidebar-text: #e6edf3;
+    --sidebar-border: #30363d;
+    --transition-speed: 0.3s;
+}
+
+/* Sidebar Container */
+.sidebar {
+    width: var(--sidebar-width-collapsed);
+    height: 100vh;
+    position: fixed;
+    top: 0;
+    left: 0;
+    display: flex;
+    flex-direction: column;
+    padding: 2rem 0.75rem 1rem;
+    box-sizing: border-box;
+    z-index: 1000;
+    background-color: var(--sidebar-bg);
+    border-right: 1px solid var(--sidebar-border);
+    transition: width var(--transition-speed) cubic-bezier(0.2, 0, 0, 1);
+    overflow: hidden;
+    white-space: nowrap;
+}
+
+/* Expand on Hover */
+.sidebar:hover {
+    width: var(--sidebar-width-expanded);
+    border-right: 1px solid var(--sidebar-border);
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.4);
+    /* Shadow to separate from content when overlaying */
+}
+
+/* Header / Logo */
+.sidebar__header {
+    padding: 0 0.75rem 2rem;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    margin-bottom: 0.5rem;
+}
+
+.sidebar__logo {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    text-decoration: none;
+    color: var(--sidebar-text);
+    transition: all var(--transition-speed);
+}
+
+.sidebar__logo-icon {
+    font-size: 1.5rem;
+    min-width: 24px;
+    display: flex;
+    justify-content: center;
+}
+
+.sidebar__logo-text {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-size: 1.5rem;
+    /* Larger cursive-ish logo size */
+    font-weight: 600;
+    /* Or use a specific font if available */
+    opacity: 0;
+    transform: translateX(-10px);
+    transition: all var(--transition-speed);
+    display: none;
+    /* Hide via display to avoid layout during transition, or handle opacity */
+}
+
+.sidebar:hover .sidebar__logo-text {
+    opacity: 1;
+    transform: translateX(0);
+    display: block;
+}
+
+/* When collapsed, show a specific small logo? 
+   The current code uses the icon as the small logo. 
+   Instagram switches from the text wordmark to a camera icon.
+*/
+.sidebar:not(:hover) .sidebar__logo-icon {
+    transform: scale(1.1);
+}
+
+
+/* Nav Area */
+.sidebar__nav {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    flex: 1;
+}
+
+/* Nav Items */
+.sidebar__item {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.75rem;
+    color: var(--sidebar-text);
+    text-decoration: none;
+    border-radius: 8px;
+    transition: background-color 0.2s;
+    font-size: 1rem;
+    font-weight: 400;
+    /* Regular weight */
+}
+
+.sidebar__item:hover {
+    background-color: var(--sidebar-hover);
+}
+
+.sidebar__item--active {
+    font-weight: 700;
+    /* Bold when active */
+}
+
+.sidebar__item--active .sidebar__icon {
+    /* Make icon potentially "filled" or bolder via SVG change in TSX */
+    transform: scale(1.05);
+}
+
+/* Icons */
+.sidebar__icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    min-width: 24px;
+    /* Ensure icon doesn't shrink */
+    transition: transform 0.2s;
+}
+
+.sidebar__label {
+    opacity: 0;
+    transition: opacity var(--transition-speed) ease;
+    white-space: nowrap;
+}
+
+.sidebar:hover .sidebar__label {
+    opacity: 1;
+}
+
+/* Footer Section */
+.sidebar__footer {
+    margin-top: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    /* padding-top: 1rem; */
+}
+
+.sidebar__create-btn {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    width: 100%;
+    padding: 0.75rem;
+    background: transparent;
+    color: var(--sidebar-text);
+    border: none;
+    cursor: pointer;
+    font-size: 1rem;
+    font-weight: 400;
+    /* Match nav items */
+    border-radius: 8px;
+    transition: background-color 0.2s;
+}
+
+.sidebar__create-btn:hover {
+    background-color: var(--sidebar-hover);
+}
+
+.sidebar__create-btn .sidebar__icon {
+    /* Inherit generic icon styles */
+}
+
+/* Profile Link */
+.sidebar__profile {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.75rem;
+    border-radius: 8px;
+    text-decoration: none;
+    color: var(--sidebar-text);
+    transition: background-color 0.2s;
+}
+
+.sidebar__profile:hover {
+    background-color: var(--sidebar-hover);
+}
+
+.sidebar__avatar {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    object-fit: cover;
+    /* border: 1px solid #262626; */
+    min-width: 24px;
+}
+
+.sidebar__profile-info {
+    opacity: 0;
+    transition: opacity var(--transition-speed);
+    display: flex;
+    flex-direction: column;
+    line-height: 1.2;
+}
+
+.sidebar:hover .sidebar__profile-info {
+    opacity: 1;
+}
+
+.sidebar__profile-name {
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+.sidebar__profile-handle {
+    font-size: 0.75rem;
+    color: #a8a8a8;
+}
+
+
+/* Mobile Overlay */
+.sidebar__overlay {
+    display: none;
+}
+
+/* Mobile Styles */
+@media (max-width: 768px) {
+    .sidebar {
+        width: 244px;
+        /* Drawer width */
+        transform: translateX(-100%);
+        transition: transform 0.3s ease;
+        border-right: none;
+    }
+
+    .sidebar.open {
+        transform: translateX(0);
+    }
+
+    .sidebar:hover {
+        width: 244px;
+        /* No expand behavior on mobile touch */
+        box-shadow: none;
+    }
+
+    .sidebar__logo-text,
+    .sidebar__label,
+    .sidebar__profile-info {
+        opacity: 1;
+        display: block;
+    }
+
+    .sidebar__overlay {
+        display: none;
+    }
+
+    .sidebar__overlay--show {
+        display: block;
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.6);
+        z-index: 999;
+        backdrop-filter: blur(4px);
+    }
+}

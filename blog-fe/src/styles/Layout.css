@@ -1,0 +1,166 @@
+/* blog-fe/src/styles/Layout.css */
+:root {
+    --header-height: 64px;
+    /* Still used for mobile */
+    --sidebar-width: 73px;
+    /* Narrow collapsed width matching Instagram */
+}
+
+.layout {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    background-color: #0d1117;
+}
+
+.layout__header {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: var(--header-height);
+    z-index: 100;
+    background: rgba(22, 27, 34, 0.85);
+    /* Glassmorphism */
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid #30363d;
+    display: flex;
+    align-items: center;
+}
+
+.layout__header-content {
+    width: 100%;
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 0 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+}
+
+.layout__toggle-sidebar {
+    display: none;
+    /* hidden on desktop */
+    background: none;
+    border: none;
+    color: var(--color-text);
+    cursor: pointer;
+    font-size: 1.5rem;
+    padding: 0.5rem;
+}
+
+.layout__logo {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #e6edf3;
+    text-decoration: none;
+}
+
+.layout__logo:hover {
+    color: #58a6ff;
+}
+
+.layout__logo-icon {
+    font-size: 1.5rem;
+}
+
+.layout__actions {
+    margin-left: auto;
+    display: flex;
+    gap: 0.75rem;
+}
+
+/* Layout Body: Sidebar + Main */
+.layout__body {
+    display: flex;
+    max-width: 1400px;
+    margin: 0 auto;
+    width: 100%;
+    flex: 1;
+    padding-top: var(--header-height);
+    /* Offset fixed header */
+    position: relative;
+    /* Context for children */
+}
+
+/* Main Content Area */
+.layout__main {
+    flex: 1;
+    min-width: 0;
+    /* prevent flex overflow */
+    padding: 2rem;
+    position: relative;
+    z-index: 1;
+}
+
+.layout__content {
+    max-width: 1000px;
+    margin: 0 auto;
+}
+
+@media (max-width: 768px) {
+    .layout__toggle-sidebar {
+        display: block;
+    }
+
+    .layout__body {
+        /* Sidebar becomes absolute/fixed on mobile, so main takes full width */
+        flex-direction: column;
+    }
+
+    .layout__main {
+        padding: 1rem;
+    }
+
+    .layout__main {
+        padding: 1rem;
+    }
+}
+
+/* Chat Page Specific Overrides */
+.layout__body--full {
+    max-width: 100%;
+}
+
+.layout__main--nopadding {
+    padding: 0 0 0 2rem;
+    /* Keep left padding but remove others maybe? Or adjust based on design. */
+    /* Actually we need to account for sidebar being fixed. The previous CSS didn't have margin-left on main, 
+       which assumes maybe padding-left or something handled it. 
+       Let's assume we want to use the full available width. */
+    padding: 1rem;
+    margin-left: var(--sidebar-width);
+    /* Ensure we offset the fixed sidebar */
+}
+
+/* Global fix for layout__main to respect sidebar */
+.layout__main {
+    margin-left: var(--sidebar-width);
+    /* Apply globally if it was missing */
+}
+
+.layout__content--full {
+    max-width: 100%;
+    height: calc(100vh - var(--header-height) - 2rem);
+    display: flex;
+    flex-direction: column;
+}
+
+.layout__header-content--full {
+    max-width: 100%;
+    padding: 0 2rem;
+}
+
+@media (max-width: 768px) {
+    .layout__main--nopadding {
+        margin-left: 0;
+        padding: 0;
+    }
+
+    .layout__main {
+        margin-left: 0;
+    }
+}
