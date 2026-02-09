@@ -1,5 +1,3 @@
-import type { Message } from '../api/chat.api';
-
 export interface WebSocketMessage {
     type: 'new_message' | 'typing' | 'read' | 'user_online' | 'user_offline';
     payload: any;
