@@ -29,8 +29,7 @@ class ChatWebSocketService {
 
         // WebSocket connects directly to chat-service (port 8006) because KrakenD doesn't support WebSocket proxying
         // HTTP APIs go through gateway (port 8080), but WebSocket needs direct connection
-        const baseUrl = import.meta.env.VITE_CHAT_WS_URL || 'ws://localhost:8006/ws';
-        const wsUrl = `${baseUrl}?token=${encodeURIComponent(token)}&user_id=${encodeURIComponent(userId)}`;
+        const wsUrl = `ws://localhost:8006/ws?token=${encodeURIComponent(token)}&user_id=${encodeURIComponent(userId)}`;
 
         console.log('🔌 Attempting WebSocket connection to chat-service...', {
             userId,
