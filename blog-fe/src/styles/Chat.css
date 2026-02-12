@@ -293,11 +293,15 @@
 
 @media (max-width: 768px) {
     .chat-page {
-        padding: 10px;
+        padding: 0;
+        /* Remove padding on mobile to maximize space */
+        border-radius: 0;
+        /* Remove border radius for full screen */
     }
 
     .chat-page__container {
-        height: calc(100vh - 20px);
+        height: 100%;
+        /* Fill parent container */
         grid-template-columns: 1fr;
         gap: 0;
     }

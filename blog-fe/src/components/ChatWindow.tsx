@@ -11,9 +11,10 @@ interface ChatWindowProps {
     conversation: Conversation;
     currentUserId: string;
     onDeleteConversation?: () => void;
+    onBack?: () => void; // For mobile: go back to conversation list
 }
 
-export default function ChatWindow({ conversation, currentUserId, onDeleteConversation }: ChatWindowProps) {
+export default function ChatWindow({ conversation, currentUserId, onDeleteConversation, onBack }: ChatWindowProps) {
     const navigate = useNavigate();
     const [messages, setMessages] = useState<Message[]>([]);
     const [inputValue, setInputValue] = useState('');
@@ -249,6 +250,16 @@ export default function ChatWindow({ conversation, currentUserId, onDeleteConver
         <div className="chat-window">
             {/* Header */}
             <div className="chat-window__header">
+                {/* Back button for mobile */}
+                {onBack && (
+                    <button
+                        className="chat-window__back-btn"
+                        onClick={onBack}
+                        title="Back to conversations"
+                    >
+                        ←
+                    </button>
+                )}
                 <div className="chat-window__header-info">
                     {typeof getConversationAvatar() === 'string' && getConversationAvatar().startsWith('http') ? (
                         <img

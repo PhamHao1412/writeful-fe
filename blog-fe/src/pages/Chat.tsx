@@ -269,6 +269,10 @@ export default function Chat() {
                             conversation={selectedConversation}
                             currentUserId={currentUserId}
                             onDeleteConversation={() => handleDeleteConversation(selectedConversation.id)}
+                            onBack={() => {
+                                setSelectedConversation(null);
+                                setSearchParams({});
+                            }}
                         />
                     ) : (
                         <div className="chat-page__empty">

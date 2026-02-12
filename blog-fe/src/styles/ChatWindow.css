@@ -19,6 +19,9 @@
     justify-content: space-between;
     align-items: center;
     gap: 16px;
+    position: sticky;
+    top: 0;
+    z-index: 10;
 }
 
 .chat-window__delete-btn {
@@ -44,6 +47,33 @@
 }
 
 .chat-window__delete-btn:active {
+    transform: scale(0.95);
+}
+
+.chat-window__back-btn {
+    flex-shrink: 0;
+    width: 36px;
+    height: 36px;
+    border: none;
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+    border-radius: 50%;
+    font-size: 20px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: none;
+    /* Hidden by default, shown on mobile */
+    align-items: center;
+    justify-content: center;
+}
+
+.chat-window__back-btn:hover {
+    background: rgba(255, 255, 255, 0.3);
+    transform: translateX(-2px);
+}
+
+.chat-window__back-btn:active {
     transform: scale(0.95);
 }
 
@@ -313,6 +343,11 @@
 
 /* Responsive */
 @media (max-width: 768px) {
+    .chat-window__back-btn {
+        display: flex;
+        /* Show back button on mobile */
+    }
+
     .chat-window__header {
         padding: 12px 16px;
     }
