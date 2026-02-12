@@ -136,6 +136,8 @@
     padding: 20px;
     background: linear-gradient(to bottom, #fafafa 0%, #ffffff 100%);
     scroll-behavior: smooth;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
 }
 
 .chat-window__messages::-webkit-scrollbar {
