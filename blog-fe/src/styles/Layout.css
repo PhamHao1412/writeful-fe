@@ -158,6 +158,8 @@
     .layout__main--nopadding {
         margin-left: 0;
         padding: 0;
+        padding-top: 1rem;
+        /* Add top padding to prevent navbar overlay */
     }
 
     .layout__main {
