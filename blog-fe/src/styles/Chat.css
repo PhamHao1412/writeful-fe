@@ -320,4 +320,10 @@
     .chat-page__container:has(.chat-page__empty) .chat-page__main {
         display: none;
     }
+
+    /* Fix dark space below chat window on mobile */
+    .chat-page__main {
+        background: white;
+        height: 100%;
+    }
 }
