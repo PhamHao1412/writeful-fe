@@ -149,6 +149,13 @@
     flex-direction: column;
 }
 
+/* Use dvh for better mobile support */
+@supports (height: 100dvh) {
+    .layout__content--full {
+        height: calc(100dvh - var(--header-height) - 2rem);
+    }
+}
+
 .layout__header-content--full {
     max-width: 100%;
     padding: 0 2rem;
@@ -158,11 +165,21 @@
     .layout__main--nopadding {
         margin-left: 0;
         padding: 0;
-        padding-top: 1rem;
-        /* Add top padding to prevent navbar overlay */
+        /* Remove all padding on mobile for chat */
     }
 
     .layout__main {
         margin-left: 0;
+    }
+
+    .layout__content--full {
+        height: calc(100vh - var(--header-height));
+    }
+
+    /* Use dvh for better mobile support */
+    @supports (height: 100dvh) {
+        .layout__content--full {
+            height: calc(100dvh - var(--header-height));
+        }
     }
 }

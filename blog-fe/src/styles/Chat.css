@@ -1,7 +1,6 @@
 .chat-page {
-    /* height: calc(100vh - 64px - 4rem); Let content determine height or use flex */
     height: 100%;
-    /* Fill the layout__content--full container */
+    max-height: 100%;
     background: linear-gradient(135deg, #1f2329 0%, #161b22 100%);
     border: 1px solid #30363d;
     padding: 0;
@@ -297,6 +296,9 @@
         /* Remove padding on mobile to maximize space */
         border-radius: 0;
         /* Remove border radius for full screen */
+        border: none;
+        /* Remove border on mobile */
+        max-height: 100%;
     }
 
     .chat-page__container {
