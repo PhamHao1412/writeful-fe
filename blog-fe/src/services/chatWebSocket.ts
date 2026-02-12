@@ -27,12 +27,15 @@ class ChatWebSocketService {
 
         this.isIntentionallyClosed = false;
 
-        // WebSocket connects directly to chat-service (port 8006) because KrakenD doesn't support WebSocket proxying
-        // HTTP APIs go through gateway (port 8080), but WebSocket needs direct connection
-        const wsUrl = `ws://localhost:8006/ws?token=${encodeURIComponent(token)}&user_id=${encodeURIComponent(userId)}`;
+        // Get WebSocket URL from environment variable
+        // In production, this should be the Cloudflare Tunnel URL for WebSocket
+        // In development, this is ws://localhost:8006
+        const wsBaseUrl = import.meta.env.VITE_WS_URL || 'ws://localhost:8006';
+        const wsUrl = `${wsBaseUrl}/ws?token=${encodeURIComponent(token)}&user_id=${encodeURIComponent(userId)}`;
 
-        console.log('🔌 Attempting WebSocket connection to chat-service...', {
+        console.log('🔌 Attempting WebSocket connection...', {
             userId,
+            baseUrl: wsBaseUrl,
             url: wsUrl.replace(/token=[^&]+/, 'token=***') // Hide token in logs
         });
 
