@@ -158,7 +158,7 @@ export default function UserProfilePage() {
                     <div className="user-profile__info">
                         <div className="user-profile__info-content">
                             <div className="user-profile__name">{profile.display_name}</div>
-                            <div className="user-profile__username">@{profile.username}</div>
+                            <div className="user-profile__username">{profile.username}</div>
                             <div className="user-profile__bio">{profile.bio || "No bio yet"}</div>
 
                             <div className="user-profile__stats">
