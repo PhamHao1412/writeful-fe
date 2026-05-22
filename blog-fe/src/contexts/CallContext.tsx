@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect, useRef } from 'r
 import { chatWebSocket } from '../services/chatWebSocket';
 import { useAuth } from './AuthContext';
 import { sendMessage } from '../api/chat.api';
+import { getProfile, type UserProfile } from '../api/auth.api';
 
 export type CallState = 'idle' | 'calling' | 'ringing' | 'connected';
 export type CallType = 'audio' | 'video';
@@ -127,7 +128,10 @@ const iceConfiguration: RTCConfiguration = {
 };
 
 export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-    const { profile } = useAuth();
+    const { profile: authProfile } = useAuth();
+    const [localProfile, setLocalProfile] = useState<UserProfile | null>(null);
+    const profile = authProfile || localProfile;
+
     const [callState, setCallState] = useState<CallState>('idle');
     const [callType, setCallType] = useState<CallType>('audio');
     const [peerUser, setPeerUser] = useState<PeerUser | null>(null);
@@ -148,9 +152,25 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Keep active user refs
     const currentUserId = profile?.id || '';
 
+    // Self-healing profile loader inside CallProvider to bypass AuthContext's async loading delay
+    useEffect(() => {
+        if (!authProfile && localStorage.getItem('access_token')) {
+            console.log('📡 [CallContext] Fetching user profile locally for call system...');
+            getProfile()
+                .then((data) => {
+                    console.log('✅ [CallContext] Profile loaded successfully:', data.id);
+                    setLocalProfile(data);
+                })
+                .catch((err) => {
+                    console.error('❌ [CallContext ERROR] Failed to fetch profile locally:', err);
+                });
+        }
+    }, [authProfile]);
+
     // Listen to websocket messages
     useEffect(() => {
-        if (!currentUserId) return;
+        const hasToken = !!localStorage.getItem('access_token');
+        if (!hasToken && !currentUserId) return;
 
         const unsubscribe = chatWebSocket.onMessage(async (message) => {
             const { type, payload } = message;

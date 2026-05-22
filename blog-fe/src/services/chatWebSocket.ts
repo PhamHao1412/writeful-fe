@@ -17,9 +17,10 @@ class ChatWebSocketService {
     private ws: WebSocket | null = null;
     private messageHandlers: Set<MessageHandler> = new Set();
     private reconnectAttempts = 0;
-    private maxReconnectAttempts = 5;
+    private maxReconnectAttempts = 99999; // Retries infinitely during deployments/server restarts
     private reconnectDelay = 1000;
     private isIntentionallyClosed = false;
+    private userId: string | null = null;
 
     connect(token: string, userId: string) {
         if (this.ws?.readyState === WebSocket.OPEN) {
@@ -28,6 +29,9 @@ class ChatWebSocketService {
         }
 
         this.isIntentionallyClosed = false;
+        if (userId) {
+            this.userId = userId;
+        }
 
         // Get WebSocket URL from environment variable
         // In production, this should be the Cloudflare Tunnel URL for WebSocket
@@ -41,10 +45,10 @@ class ChatWebSocketService {
             wsBaseUrl = wsBaseUrl.replace('http://', 'ws://');
         }
 
-        const wsUrl = `${wsBaseUrl}/ws?token=${encodeURIComponent(token)}&user_id=${encodeURIComponent(userId)}`;
+        const wsUrl = `${wsBaseUrl}/ws?token=${encodeURIComponent(token)}&user_id=${encodeURIComponent(userId || this.userId || '')}`;
 
         console.log('🔌 Attempting WebSocket connection...', {
-            userId,
+            userId: userId || this.userId,
             baseUrl: wsBaseUrl,
             url: wsUrl.replace(/token=[^&]+/, 'token=***') // Hide token in logs
         });
@@ -57,7 +61,7 @@ class ChatWebSocketService {
         }
 
         this.ws.onopen = () => {
-            console.log('✅ WebSocket connected successfully!', { userId, readyState: this.ws?.readyState });
+            console.log('✅ WebSocket connected successfully!', { userId: userId || this.userId, readyState: this.ws?.readyState });
             this.reconnectAttempts = 0;
         };
 
@@ -90,11 +94,15 @@ class ChatWebSocketService {
             // Attempt to reconnect if not intentionally closed
             if (!this.isIntentionallyClosed && this.reconnectAttempts < this.maxReconnectAttempts) {
                 this.reconnectAttempts++;
-                const delay = this.reconnectDelay * Math.pow(2, this.reconnectAttempts - 1);
+                // Exponential backoff capped at 10 seconds
+                const delay = Math.min(10000, this.reconnectDelay * Math.pow(2, this.reconnectAttempts - 1));
                 console.log(`🔄 Reconnecting in ${delay}ms... (attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts})`);
 
                 setTimeout(() => {
-                    this.connect(token, userId);
+                    const currentToken = localStorage.getItem('access_token') || token;
+                    const currentUserId = userId || this.userId || '';
+                    console.log('🔄 Reconnecting with fresh token from localStorage...', { currentUserId });
+                    this.connect(currentToken, currentUserId);
                 }, delay);
             }
         };
