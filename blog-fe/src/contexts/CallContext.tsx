@@ -138,6 +138,7 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const [callDuration, setCallDuration] = useState(0);
 
     const peerConnectionRef = useRef<RTCPeerConnection | null>(null);
+    const pendingIceCandidatesRef = useRef<RTCIceCandidateInit[]>([]);
     const targetUserIdRef = useRef<string | null>(null);
     const conversationIdRef = useRef<string | null>(null);
     const localStreamRef = useRef<MediaStream | null>(null);
@@ -274,6 +275,20 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
                         try {
                             await pc.setRemoteDescription(new RTCSessionDescription(payload.sdp));
+                            
+                            // Process any queued ICE candidates after remote description is set
+                            if (pendingIceCandidatesRef.current.length > 0) {
+                                console.log(`🚀 Processing ${pendingIceCandidatesRef.current.length} queued ICE Candidates for callee.`);
+                                for (const candidate of pendingIceCandidatesRef.current) {
+                                    try {
+                                        await pc.addIceCandidate(new RTCIceCandidate(candidate));
+                                    } catch (e) {
+                                        console.error('Error adding queued ICE Candidate:', e);
+                                    }
+                                }
+                                pendingIceCandidatesRef.current = [];
+                            }
+
                             const answer = await pc.createAnswer();
                             await pc.setLocalDescription(answer);
 
@@ -294,6 +309,19 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
                         if (pc) {
                             try {
                                 await pc.setRemoteDescription(new RTCSessionDescription(payload.sdp));
+
+                                // Process any queued ICE candidates after remote description is set
+                                if (pendingIceCandidatesRef.current.length > 0) {
+                                    console.log(`🚀 Processing ${pendingIceCandidatesRef.current.length} queued ICE Candidates for caller.`);
+                                    for (const candidate of pendingIceCandidatesRef.current) {
+                                        try {
+                                            await pc.addIceCandidate(new RTCIceCandidate(candidate));
+                                        } catch (e) {
+                                            console.error('Error adding queued ICE Candidate:', e);
+                                        }
+                                    }
+                                    pendingIceCandidatesRef.current = [];
+                                }
                             } catch (err) {
                                 console.error('Error setting remote description:', err);
                             }
@@ -304,11 +332,16 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
                 case 'webrtc_ice_candidate': {
                     const pc = peerConnectionRef.current;
-                    if (pc && payload.candidate) {
-                        try {
-                            await pc.addIceCandidate(new RTCIceCandidate(payload.candidate));
-                        } catch (err) {
-                            console.error('Error adding ICE Candidate:', err);
+                    if (payload.candidate) {
+                        if (pc && pc.remoteDescription && pc.remoteDescription.type) {
+                            try {
+                                await pc.addIceCandidate(new RTCIceCandidate(payload.candidate));
+                            } catch (err) {
+                                console.error('Error adding ICE Candidate:', err);
+                            }
+                        } else {
+                            console.log('⏳ Remote description not set yet. Queuing ICE Candidate.');
+                            pendingIceCandidatesRef.current.push(payload.candidate);
                         }
                     }
                     break;
@@ -370,6 +403,8 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
             localStreamRef.current.getTracks().forEach((track) => track.stop());
             localStreamRef.current = null;
         }
+
+        pendingIceCandidatesRef.current = [];
 
         setLocalStream(null);
         setRemoteStream(null);

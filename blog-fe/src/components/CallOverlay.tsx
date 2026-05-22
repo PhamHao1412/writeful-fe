@@ -41,9 +41,15 @@ export const CallOverlay: React.FC = () => {
     useEffect(() => {
         if (remoteVideoRef.current && remoteStream && callType === 'video') {
             remoteVideoRef.current.srcObject = remoteStream;
+            remoteVideoRef.current.play().catch(err => {
+                console.warn('Auto-play remote video stream failed or was blocked by browser policy:', err);
+            });
         }
         if (remoteAudioRef.current && remoteStream && callType === 'audio') {
             remoteAudioRef.current.srcObject = remoteStream;
+            remoteAudioRef.current.play().catch(err => {
+                console.warn('Auto-play remote audio stream failed or was blocked by browser policy:', err);
+            });
         }
     }, [remoteStream, callState, callType]);
 
