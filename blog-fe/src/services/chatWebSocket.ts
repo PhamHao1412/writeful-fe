@@ -30,7 +30,15 @@ class ChatWebSocketService {
         // Get WebSocket URL from environment variable
         // In production, this should be the Cloudflare Tunnel URL for WebSocket
         // In development, this is ws://localhost:8006
-        const wsBaseUrl = import.meta.env.VITE_WS_URL || 'ws://localhost:8006';
+        let wsBaseUrl = import.meta.env.VITE_WS_URL || 'ws://localhost:8006';
+        
+        // Auto-sanitize protocol: browsers require 'ws://' or 'wss://' schemes
+        if (wsBaseUrl.startsWith('https://')) {
+            wsBaseUrl = wsBaseUrl.replace('https://', 'wss://');
+        } else if (wsBaseUrl.startsWith('http://')) {
+            wsBaseUrl = wsBaseUrl.replace('http://', 'ws://');
+        }
+
         const wsUrl = `${wsBaseUrl}/ws?token=${encodeURIComponent(token)}&user_id=${encodeURIComponent(userId)}`;
 
         console.log('🔌 Attempting WebSocket connection...', {
@@ -39,7 +47,12 @@ class ChatWebSocketService {
             url: wsUrl.replace(/token=[^&]+/, 'token=***') // Hide token in logs
         });
 
-        this.ws = new WebSocket(wsUrl);
+        try {
+            this.ws = new WebSocket(wsUrl);
+        } catch (err) {
+            console.error('❌ Failed to construct WebSocket object. Scheme or syntax issue:', err);
+            return;
+        }
 
         this.ws.onopen = () => {
             console.log('✅ WebSocket connected successfully!', { userId, readyState: this.ws?.readyState });
