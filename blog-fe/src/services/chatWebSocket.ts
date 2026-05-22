@@ -1,5 +1,5 @@
 export interface WebSocketMessage {
-    type: 'new_message' | 'typing' | 'read' | 'user_online' | 'user_offline';
+    type: 'new_message' | 'typing' | 'read' | 'user_online' | 'user_offline' | 'call_initiate' | 'call_receive' | 'call_ringing' | 'call_reject' | 'call_cancel' | 'call_hangup' | 'webrtc_offer' | 'webrtc_answer' | 'webrtc_ice_candidate';
     payload: any;
 }
 
@@ -128,6 +128,19 @@ class ChatWebSocketService {
      */
     isConnected(): boolean {
         return this.ws?.readyState === WebSocket.OPEN;
+    }
+
+    /**
+     * Send WebRTC calling/signaling message
+     */
+    sendSignalingMessage(type: WebSocketMessage['type'], payload: any) {
+        if (this.ws?.readyState === WebSocket.OPEN) {
+            const message: WebSocketMessage = {
+                type,
+                payload
+            };
+            this.ws.send(JSON.stringify(message));
+        }
     }
 }
 

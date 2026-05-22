@@ -5,6 +5,7 @@ import type { Conversation, Message } from '../api/chat.api';
 import { getMessages, sendMessage, markConversationAsRead } from '../api/chat.api';
 import { chatWebSocket } from '../services/chatWebSocket';
 import MessageBubble from './MessageBubble';
+import { useCall } from '../contexts/CallContext';
 import '../styles/ChatWindow.css';
 
 interface ChatWindowProps {
@@ -16,6 +17,7 @@ interface ChatWindowProps {
 
 export default function ChatWindow({ conversation, currentUserId, onDeleteConversation, onBack }: ChatWindowProps) {
     const navigate = useNavigate();
+    const { startCall } = useCall();
     const [messages, setMessages] = useState<Message[]>([]);
     const [inputValue, setInputValue] = useState('');
     const [isLoading, setIsLoading] = useState(false);
@@ -72,6 +74,23 @@ export default function ChatWindow({ conversation, currentUserId, onDeleteConver
         if (username) {
             navigate(`/users/${username}`);
         }
+    };
+
+    const handleStartCall = (type: 'audio' | 'video') => {
+        const otherParticipant = conversation.participants.find(p => p.user_id !== currentUserId);
+        if (!otherParticipant) return;
+
+        startCall(
+            otherParticipant.user_id,
+            type,
+            {
+                id: otherParticipant.user_id,
+                displayName: otherParticipant.user?.display_name || otherParticipant.user?.username || 'Unknown User',
+                avatarUrl: otherParticipant.user?.avatar_url,
+                username: otherParticipant.user?.username,
+            },
+            conversation.id
+        );
     };
 
     // Load messages when conversation changes
@@ -289,15 +308,38 @@ export default function ChatWindow({ conversation, currentUserId, onDeleteConver
                         </p>
                     </div>
                 </div>
-                {onDeleteConversation && (
-                    <button
-                        className="chat-window__delete-btn"
-                        onClick={onDeleteConversation}
-                        title="Delete conversation"
-                    >
-                        🗑️
-                    </button>
-                )}
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                    {conversation.type === 'direct' && (
+                        <>
+                            <button
+                                type="button"
+                                className="chat-window__call-btn"
+                                onClick={() => handleStartCall('audio')}
+                                title="Voice Call"
+                            >
+                                📞
+                            </button>
+                            <button
+                                type="button"
+                                className="chat-window__call-btn"
+                                onClick={() => handleStartCall('video')}
+                                title="Video Call"
+                            >
+                                📹
+                            </button>
+                        </>
+                    )}
+                    {onDeleteConversation && (
+                        <button
+                            type="button"
+                            className="chat-window__delete-btn"
+                            onClick={onDeleteConversation}
+                            title="Delete conversation"
+                        >
+                            🗑️
+                        </button>
+                    )}
+                </div>
             </div>
 
             {/* Messages */}
