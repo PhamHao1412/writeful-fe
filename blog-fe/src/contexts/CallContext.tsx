@@ -125,7 +125,7 @@ const iceConfiguration: RTCConfiguration = {
 };
 
 export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-    const { user } = useAuth();
+    const { profile } = useAuth();
     const [callState, setCallState] = useState<CallState>('idle');
     const [callType, setCallType] = useState<CallType>('audio');
     const [peerUser, setPeerUser] = useState<PeerUser | null>(null);
@@ -140,7 +140,7 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const localStreamRef = useRef<MediaStream | null>(null);
 
     // Keep active user refs
-    const currentUserId = user?.id || '';
+    const currentUserId = profile?.id || '';
 
     // Listen to websocket messages
     useEffect(() => {
@@ -344,9 +344,9 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
         chatWebSocket.sendSignalingMessage('call_initiate', {
             target_user_id: targetUserId,
             caller_id: currentUserId,
-            caller_name: user?.display_name || user?.username || 'Anonymous User',
-            caller_avatar: user?.avatar_url,
-            caller_username: user?.username,
+            caller_name: profile?.display_name || profile?.username || 'Anonymous User',
+            caller_avatar: profile?.avatar_url,
+            caller_username: profile?.username,
             conversation_id: conversationId,
             call_type: type,
         });
