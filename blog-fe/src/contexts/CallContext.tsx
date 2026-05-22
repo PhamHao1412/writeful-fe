@@ -77,27 +77,34 @@ class RingtonePlayer {
             this.ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
             const play = () => {
                 if (!this.ctx) return;
-                const osc = this.ctx.createOscillator();
-                const gain = this.ctx.createGain();
+                const now = this.ctx.currentTime;
 
-                // Sleek, modern dual-toned pulse
-                osc.type = 'sine';
-                osc.frequency.setValueAtTime(493.88, this.ctx.currentTime); // B4
-                osc.frequency.exponentialRampToValueAtTime(659.25, this.ctx.currentTime + 0.2); // E5
-                osc.frequency.setValueAtTime(493.88, this.ctx.currentTime + 0.3);
-                osc.frequency.exponentialRampToValueAtTime(880.00, this.ctx.currentTime + 0.5); // A5
+                // Premium synthesized marimba-like arpeggio chime (C5 -> E5 -> G5 -> C6)
+                // Offers a gorgeous, clean, and modern incoming ringtone with zero external assets.
+                const notes = [523.25, 659.25, 783.99, 1046.50];
+                notes.forEach((freq, idx) => {
+                    if (!this.ctx) return;
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
 
-                gain.gain.setValueAtTime(0.12, this.ctx.currentTime);
-                gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 1.2);
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(freq, now + idx * 0.12);
 
-                osc.connect(gain);
-                gain.connect(this.ctx.destination);
+                    const noteStart = now + idx * 0.12;
+                    gain.gain.setValueAtTime(0, now);
+                    gain.gain.setValueAtTime(0, noteStart);
+                    gain.gain.linearRampToValueAtTime(0.12, noteStart + 0.02);
+                    gain.gain.exponentialRampToValueAtTime(0.001, noteStart + 0.5);
 
-                osc.start();
-                osc.stop(this.ctx.currentTime + 1.2);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+
+                    osc.start(noteStart);
+                    osc.stop(noteStart + 0.5);
+                });
             };
             play();
-            this.intervalId = setInterval(play, 2000);
+            this.intervalId = setInterval(play, 3000);
         } catch (e) {
             console.error('Failed to play incoming ringtone:', e);
         }
@@ -218,7 +225,11 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
                         // Caller initializes peer connection and sets tracks
                         try {
                             const stream = await navigator.mediaDevices.getUserMedia({
-                                audio: true,
+                                audio: {
+                                    echoCancellation: true,
+                                    noiseSuppression: true,
+                                    autoGainControl: true,
+                                },
                                 video: callType === 'video'
                             });
                             setLocalStream(stream);
@@ -473,7 +484,11 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         try {
             const stream = await navigator.mediaDevices.getUserMedia({
-                audio: true,
+                audio: {
+                    echoCancellation: true,
+                    noiseSuppression: true,
+                    autoGainControl: true,
+                },
                 video: callType === 'video'
             });
             setLocalStream(stream);

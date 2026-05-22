@@ -4,6 +4,7 @@
     left: 0;
     width: 100vw;
     height: 100vh;
+    height: 100dvh; /* Dynamic viewport height to prevent browser toolbar overlap */
     background: rgba(10, 10, 12, 0.85);
     backdrop-filter: blur(25px);
     -webkit-backdrop-filter: blur(25px);
@@ -273,7 +274,7 @@
 /* Bottom in-call toolbar actions */
 .call-toolbar {
     position: absolute;
-    bottom: 40px;
+    bottom: calc(40px + env(safe-area-inset-bottom, 0px));
     left: 50%;
     transform: translateX(-50%);
     background: rgba(15, 15, 20, 0.65);
@@ -357,3 +358,61 @@
     z-index: 10;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
+
+/* Mobile Responsive Optimization for Call Screen */
+@media (max-width: 480px) {
+    .call-overlay__panel {
+        padding: 32px 24px;
+        width: 85%;
+    }
+    
+    .call-overlay__avatar-wrapper {
+        width: 110px;
+        height: 110px;
+        margin-bottom: 24px;
+    }
+    
+    .call-overlay__name {
+        font-size: 20px;
+    }
+    
+    .call-overlay__status {
+        margin-bottom: 24px;
+    }
+    
+    .call-toolbar {
+        bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+        padding: 8px 16px;
+        gap: 12px;
+        border-radius: 30px;
+    }
+    
+    .toolbar-btn {
+        width: 44px;
+        height: 44px;
+        font-size: 16px;
+    }
+    
+    .toolbar-btn--hangup {
+        width: 50px;
+        height: 50px;
+        font-size: 20px;
+    }
+
+    .video-stream__avatar-glow {
+        width: 120px;
+        height: 120px;
+    }
+
+    .video-stream__audio-indicator {
+        font-size: 15px;
+    }
+
+    .video-stream__local-wrapper {
+        top: 16px;
+        right: 16px;
+        width: 90px;
+        height: 135px;
+    }
+}
+
