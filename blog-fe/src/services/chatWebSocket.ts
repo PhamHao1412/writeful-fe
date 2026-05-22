@@ -139,7 +139,10 @@ class ChatWebSocketService {
                 type,
                 payload
             };
+            console.log(`📤 [WebSocket] Sending signaling message type='${type}':`, payload);
             this.ws.send(JSON.stringify(message));
+        } else {
+            console.warn(`⚠️ [WebSocket WARNING] Cannot send signaling message type='${type}'. Connection not OPEN. ReadyState:`, this.ws?.readyState);
         }
     }
 }

@@ -149,10 +149,17 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const unsubscribe = chatWebSocket.onMessage(async (message) => {
             const { type, payload } = message;
 
+            // Only log and handle call/webrtc signaling messages
+            if (type.startsWith('call_') || type.startsWith('webrtc_')) {
+                console.log(`📞 [CallContext] Received signaling packet type='${type}':`, { payload, currentCallState: callState });
+            }
+
             switch (type) {
                 case 'call_initiate': {
+                    console.log('📞 [CallContext] Processing call_initiate incoming payload:', payload);
                     // If we are already in a call or calling, automatically reject as Busy
                     if (callState !== 'idle') {
+                        console.warn(`📞 [CallContext WARNING] Already in active state '${callState}'. Sending busy auto-decline to caller:`, payload.caller_id);
                         chatWebSocket.sendSignalingMessage('call_reject', {
                             target_user_id: payload.caller_id,
                             reason: 'busy',
@@ -160,6 +167,7 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
                         return;
                     }
 
+                    console.log('📞 [CallContext] Setting up incoming call state machine: ringing');
                     // Setup incoming call
                     setCallState('ringing');
                     setCallType(payload.call_type);
@@ -172,6 +180,7 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
                     targetUserIdRef.current = payload.caller_id;
                     conversationIdRef.current = payload.conversation_id;
 
+                    console.log('📞 [CallContext] Synthesizing ringtone. Playing incoming call alert...');
                     ringtone.playIncoming();
                     break;
                 }
