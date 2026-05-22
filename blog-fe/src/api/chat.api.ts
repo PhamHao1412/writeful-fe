@@ -18,7 +18,7 @@ export interface Message {
     id: string;
     conversation_id: string;
     sender_id: string;
-    type: 'text' | 'image' | 'file';
+    type: 'text' | 'image' | 'file' | 'call';
     content: string;
     media_url?: string;
     created_at: string;
@@ -52,7 +52,7 @@ export interface CreateConversationRequest {
 
 export interface SendMessageRequest {
     conversation_id: string;
-    type: 'text' | 'image' | 'file';
+    type: 'text' | 'image' | 'file' | 'call';
     content: string;
     media_url?: string;
 }

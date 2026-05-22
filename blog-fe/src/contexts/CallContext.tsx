@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { chatWebSocket } from '../services/chatWebSocket';
 import { useAuth } from './AuthContext';
+import { sendMessage } from '../api/chat.api';
 
 export type CallState = 'idle' | 'calling' | 'ringing' | 'connected';
 export type CallType = 'audio' | 'video';
@@ -20,6 +21,7 @@ interface CallContextType {
     remoteStream: MediaStream | null;
     isMuted: boolean;
     isVideoOff: boolean;
+    callDuration: number;
     startCall: (targetUserId: string, type: CallType, peer: PeerUser, conversationId: string) => Promise<void>;
     acceptCall: () => Promise<void>;
     rejectCall: () => void;
@@ -133,11 +135,14 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
     const [isMuted, setIsMuted] = useState(false);
     const [isVideoOff, setIsVideoOff] = useState(false);
+    const [callDuration, setCallDuration] = useState(0);
 
     const peerConnectionRef = useRef<RTCPeerConnection | null>(null);
     const targetUserIdRef = useRef<string | null>(null);
     const conversationIdRef = useRef<string | null>(null);
     const localStreamRef = useRef<MediaStream | null>(null);
+    const isCallerRef = useRef<boolean>(false);
+    const connectedTimeRef = useRef<number | null>(null);
 
     // Keep active user refs
     const currentUserId = profile?.id || '';
@@ -168,6 +173,7 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
                     }
 
                     console.log('📞 [CallContext] Setting up incoming call state machine: ringing');
+                    isCallerRef.current = false;
                     // Setup incoming call
                     setCallState('ringing');
                     setCallType(payload.call_type);
@@ -228,6 +234,7 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
                                 sdp: offer,
                             });
 
+                            connectedTimeRef.current = Date.now();
                             setCallState('connected');
                         } catch (err) {
                             console.error('Failed to initiate local media stream:', err);
@@ -312,9 +319,48 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return unsubscribe;
     }, [currentUserId, callState, callType]);
 
+    // Save call history message to database (English format)
+    const saveCallHistory = async (prevState: CallState, duration: number) => {
+        if (!isCallerRef.current || !conversationIdRef.current) return;
+
+        let content = '';
+        if (prevState === 'connected') {
+            const formatDuration = (secs: number) => {
+                const m = Math.floor(secs / 60).toString().padStart(2, '0');
+                const s = (secs % 60).toString().padStart(2, '0');
+                return `${m}:${s}`;
+            };
+            const typeLabel = callType === 'video' ? 'Video call' : 'Voice call';
+            content = `${typeLabel} ended • ${formatDuration(duration)}`;
+        } else if (prevState === 'calling' || prevState === 'ringing') {
+            content = 'Missed call';
+        } else {
+            return;
+        }
+
+        try {
+            console.log('📞 [CallContext] Saving call history to database:', content);
+            await sendMessage({
+                conversation_id: conversationIdRef.current,
+                type: 'call',
+                content: content,
+            });
+        } catch (err) {
+            console.error('Failed to save call history:', err);
+        }
+    };
+
     // Clean up call streams, players and connections
     const cleanupCall = () => {
         ringtone.stop();
+
+        const prevState = callState;
+        const duration = connectedTimeRef.current ? Math.round((Date.now() - connectedTimeRef.current) / 1000) : 0;
+
+        if (isCallerRef.current && conversationIdRef.current) {
+            saveCallHistory(prevState, duration);
+        }
+
         if (peerConnectionRef.current) {
             peerConnectionRef.current.close();
             peerConnectionRef.current = null;
@@ -331,8 +377,11 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setPeerUser(null);
         setIsMuted(false);
         setIsVideoOff(false);
+        setCallDuration(0);
         targetUserIdRef.current = null;
         conversationIdRef.current = null;
+        isCallerRef.current = false;
+        connectedTimeRef.current = null;
     };
 
     // Trigger Outgoing Call
@@ -342,6 +391,7 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
             return;
         }
 
+        isCallerRef.current = true;
         setCallState('calling');
         setCallType(type);
         setPeerUser(peer);
@@ -401,6 +451,7 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 status: 'accepted',
             });
 
+            connectedTimeRef.current = Date.now();
             setCallState('connected');
         } catch (err) {
             console.error('Failed to access media devices on accept:', err);
@@ -463,6 +514,22 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
     };
 
+    // Live timer ticking effect
+    useEffect(() => {
+        let intervalId: any = null;
+        if (callState === 'connected') {
+            setCallDuration(0);
+            intervalId = setInterval(() => {
+                setCallDuration((prev) => prev + 1);
+            }, 1000);
+        } else {
+            setCallDuration(0);
+        }
+        return () => {
+            if (intervalId) clearInterval(intervalId);
+        };
+    }, [callState]);
+
     return (
         <CallContext.Provider
             value={{
@@ -473,6 +540,7 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 remoteStream,
                 isMuted,
                 isVideoOff,
+                callDuration,
                 startCall,
                 acceptCall,
                 rejectCall,

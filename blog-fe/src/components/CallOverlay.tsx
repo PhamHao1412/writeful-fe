@@ -11,6 +11,7 @@ export const CallOverlay: React.FC = () => {
         remoteStream,
         isMuted,
         isVideoOff,
+        callDuration,
         acceptCall,
         rejectCall,
         cancelCall,
@@ -22,6 +23,12 @@ export const CallOverlay: React.FC = () => {
     const localVideoRef = useRef<HTMLVideoElement | null>(null);
     const remoteVideoRef = useRef<HTMLVideoElement | null>(null);
     const remoteAudioRef = useRef<HTMLAudioElement | null>(null);
+
+    const formatDuration = (seconds: number) => {
+        const mins = Math.floor(seconds / 60);
+        const secs = seconds % 60;
+        return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    };
 
     // Bind local stream to element
     useEffect(() => {
@@ -102,6 +109,11 @@ export const CallOverlay: React.FC = () => {
             <div className="call-overlay__connected">
                 {callType === 'video' ? (
                     <div className="video-container">
+                        {/* Glassmorphic Live Timer for Video Calls */}
+                        <div className="video-stream__timer">
+                            {formatDuration(callDuration)}
+                        </div>
+
                         {/* Remote full-frame Video Stream */}
                         {remoteStream ? (
                             <video
@@ -158,7 +170,9 @@ export const CallOverlay: React.FC = () => {
                         </div>
 
                         <h3 className="call-overlay__name">{peerUser?.displayName}</h3>
-                        <p className="video-stream__audio-indicator">Connected Voice Call</p>
+                        <p className="video-stream__audio-indicator" style={{ fontFamily: 'monospace', letterSpacing: '1px', fontSize: '24px' }}>
+                            {formatDuration(callDuration)}
+                        </p>
                     </div>
                 )}
 
@@ -202,3 +216,4 @@ export const CallOverlay: React.FC = () => {
         </div>
     );
 };
+
