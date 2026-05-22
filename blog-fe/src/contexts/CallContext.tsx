@@ -39,30 +39,47 @@ class RingtonePlayer {
     private ctx: AudioContext | null = null;
     private intervalId: any = null;
 
+    init() {
+        try {
+            if (!this.ctx) {
+                this.ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+            }
+            if (this.ctx && this.ctx.state === 'suspended') {
+                this.ctx.resume();
+            }
+        } catch (e) {
+            console.error('Failed to initialize AudioContext for Ringtone:', e);
+        }
+    }
+
     playOutgoing() {
         this.stop();
         try {
-            this.ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+            this.init();
             const play = () => {
                 if (!this.ctx) return;
+                if (this.ctx.state === 'suspended') {
+                    this.ctx.resume();
+                }
+                const now = this.ctx.currentTime;
                 const osc1 = this.ctx.createOscillator();
                 const osc2 = this.ctx.createOscillator();
                 const gain = this.ctx.createGain();
 
-                osc1.frequency.setValueAtTime(440, this.ctx.currentTime); // Standard ringback
-                osc2.frequency.setValueAtTime(480, this.ctx.currentTime);
+                osc1.frequency.setValueAtTime(440, now); // Standard ringback
+                osc2.frequency.setValueAtTime(480, now);
 
-                gain.gain.setValueAtTime(0.08, this.ctx.currentTime);
-                gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 1.8);
+                gain.gain.setValueAtTime(0.08, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 1.8);
 
                 osc1.connect(gain);
                 osc2.connect(gain);
                 gain.connect(this.ctx.destination);
 
-                osc1.start();
-                osc2.start();
-                osc1.stop(this.ctx.currentTime + 1.8);
-                osc2.stop(this.ctx.currentTime + 1.8);
+                osc1.start(now);
+                osc2.start(now);
+                osc1.stop(now + 1.8);
+                osc2.stop(now + 1.8);
             };
             play();
             this.intervalId = setInterval(play, 4000);
@@ -74,9 +91,12 @@ class RingtonePlayer {
     playIncoming() {
         this.stop();
         try {
-            this.ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+            this.init();
             const play = () => {
                 if (!this.ctx) return;
+                if (this.ctx.state === 'suspended') {
+                    this.ctx.resume();
+                }
                 const now = this.ctx.currentTime;
 
                 // Premium synthesized marimba-like arpeggio chime (C5 -> E5 -> G5 -> C6)
@@ -115,16 +135,24 @@ class RingtonePlayer {
             clearInterval(this.intervalId);
             this.intervalId = null;
         }
-        if (this.ctx) {
-            try {
-                this.ctx.close();
-            } catch (e) {}
-            this.ctx = null;
-        }
+        // Do NOT close or nullify the AudioContext so that the user's initial unlock gesture is preserved.
     }
 }
 
 const ringtone = new RingtonePlayer();
+
+// Pre-unlock AudioContext on the first genuine user interaction with the page
+if (typeof window !== 'undefined') {
+    const unlock = () => {
+        ringtone.init();
+        document.removeEventListener('click', unlock);
+        document.removeEventListener('touchstart', unlock);
+        document.removeEventListener('keydown', unlock);
+    };
+    document.addEventListener('click', unlock, { passive: true });
+    document.addEventListener('touchstart', unlock, { passive: true });
+    document.addEventListener('keydown', unlock, { passive: true });
+}
 
 const iceConfiguration: RTCConfiguration = {
     iceServers: [
@@ -229,6 +257,7 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
                                     echoCancellation: true,
                                     noiseSuppression: true,
                                     autoGainControl: true,
+                                    channelCount: 1,
                                 },
                                 video: callType === 'video'
                             });
@@ -488,6 +517,7 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
                     echoCancellation: true,
                     noiseSuppression: true,
                     autoGainControl: true,
+                    channelCount: 1,
                 },
                 video: callType === 'video'
             });

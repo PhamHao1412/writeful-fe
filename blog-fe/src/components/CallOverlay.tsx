@@ -34,6 +34,9 @@ export const CallOverlay: React.FC = () => {
     useEffect(() => {
         if (localVideoRef.current && localStream) {
             localVideoRef.current.srcObject = localStream;
+            // Force programmatic mute to prevent self-microphone feedback loopback
+            // (a notorious bug in Safari/Chrome when setting srcObject dynamically)
+            localVideoRef.current.muted = true;
         }
     }, [localStream, callState]);
 
