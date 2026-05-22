@@ -1,3 +1,5 @@
+import { sendSignaling } from '../api/chat.api';
+
 export interface WebSocketMessage {
     type: 'new_message' | 'typing' | 'read' | 'user_online' | 'user_offline' | 'call_initiate' | 'call_receive' | 'call_ringing' | 'call_reject' | 'call_cancel' | 'call_hangup' | 'webrtc_offer' | 'webrtc_answer' | 'webrtc_ice_candidate';
     payload: any;
@@ -146,16 +148,16 @@ class ChatWebSocketService {
     /**
      * Send WebRTC calling/signaling message
      */
-    sendSignalingMessage(type: WebSocketMessage['type'], payload: any) {
-        if (this.ws?.readyState === WebSocket.OPEN) {
-            const message: WebSocketMessage = {
-                type,
-                payload
-            };
-            console.log(`📤 [WebSocket] Sending signaling message type='${type}':`, payload);
-            this.ws.send(JSON.stringify(message));
-        } else {
-            console.warn(`⚠️ [WebSocket WARNING] Cannot send signaling message type='${type}'. Connection not OPEN. ReadyState:`, this.ws?.readyState);
+    async sendSignalingMessage(type: WebSocketMessage['type'], payload: any) {
+        const message: WebSocketMessage = {
+            type,
+            payload
+        };
+        console.log(`📤 [HTTP POST Signaling] Sending signaling message type='${type}':`, payload);
+        try {
+            await sendSignaling(message);
+        } catch (error) {
+            console.error(`❌ [HTTP POST Signaling ERROR] Failed to send signaling message type='${type}':`, error);
         }
     }
 }

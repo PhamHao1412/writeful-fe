@@ -150,3 +150,11 @@ export async function removeParticipant(conversationId: string, userId: string):
 export async function deleteConversation(conversationId: string, participantId: string): Promise<void> {
     await authHttp.delete(`/chat/api/v1/conversations/${conversationId}/participants/${participantId}`);
 }
+
+/**
+ * Send WebRTC signaling message via HTTP POST
+ */
+export async function sendSignaling(req: { type: string; payload: any }): Promise<void> {
+    await authHttp.post('/chat/api/v1/messages/signaling', req);
+}
+
