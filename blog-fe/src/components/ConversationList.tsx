@@ -33,7 +33,8 @@ export default function ConversationList({
         }
 
         const otherParticipant = conversation.participants.find(p => p.user_id !== currentUserId);
-        return otherParticipant?.user?.avatar_url || 'https://via.placeholder.com/48';
+        const name = otherParticipant?.user?.display_name || otherParticipant?.user?.username || 'Unknown User';
+        return otherParticipant?.user?.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random`;
     };
 
     const formatLastMessageTime = (dateString?: string) => {
@@ -108,6 +109,11 @@ export default function ConversationList({
                                         src={getConversationAvatar(conversation)}
                                         alt={getConversationName(conversation)}
                                         className="conversation-item__avatar"
+                                        onError={(e) => {
+                                            const otherParticipant = conversation.participants.find(p => p.user_id !== currentUserId);
+                                            const name = otherParticipant?.user?.display_name || otherParticipant?.user?.username || 'Unknown User';
+                                            e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random`;
+                                        }}
                                     />
                                 ) : (
                                     <div className="conversation-item__avatar-emoji">

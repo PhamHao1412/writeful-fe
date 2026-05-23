@@ -55,7 +55,8 @@ export default function ChatWindow({ conversation, currentUserId, onDeleteConver
         }
 
         const otherParticipant = conversation.participants.find(p => p.user_id !== currentUserId);
-        return otherParticipant?.user?.avatar_url || 'https://via.placeholder.com/40';
+        const name = otherParticipant?.user?.display_name || otherParticipant?.user?.username || 'Unknown User';
+        return otherParticipant?.user?.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random`;
     };
 
     // Get other participant's username for navigation
@@ -80,13 +81,16 @@ export default function ChatWindow({ conversation, currentUserId, onDeleteConver
         const otherParticipant = conversation.participants.find(p => p.user_id !== currentUserId);
         if (!otherParticipant) return;
 
+        const displayName = otherParticipant.user?.display_name || otherParticipant.user?.username || 'Unknown User';
+        const avatarUrl = otherParticipant.user?.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=random`;
+
         startCall(
             otherParticipant.user_id,
             type,
             {
                 id: otherParticipant.user_id,
-                displayName: otherParticipant.user?.display_name || otherParticipant.user?.username || 'Unknown User',
-                avatarUrl: otherParticipant.user?.avatar_url,
+                displayName: displayName,
+                avatarUrl: avatarUrl,
                 username: otherParticipant.user?.username,
             },
             conversation.id
@@ -288,6 +292,10 @@ export default function ChatWindow({ conversation, currentUserId, onDeleteConver
                             onClick={handleAvatarClick}
                             style={{ cursor: conversation.type === 'direct' ? 'pointer' : 'default' }}
                             title={conversation.type === 'direct' ? 'View profile' : ''}
+                            onError={(e) => {
+                                const name = getConversationName();
+                                e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random`;
+                            }}
                         />
                     ) : (
                         <div
