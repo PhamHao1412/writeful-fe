@@ -40,7 +40,7 @@ export default function MessageBubble({ message, isOwnMessage }: MessageBubblePr
                         alt={message.sender.display_name}
                         className="message-bubble__avatar"
                         onError={(e) => {
-                            const name = message.sender.display_name || message.sender.username || 'Unknown User';
+                            const name = message.sender?.display_name || message.sender?.username || 'Unknown User';
                             e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random`;
                         }}
                     />
