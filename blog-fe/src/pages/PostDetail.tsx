@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { getPost, type PostDetail as PostDetailType } from "../api/post.api";
+import { getPost, deletePost, type PostDetail as PostDetailType } from "../api/post.api";
 import { getProfile, type UserProfile } from "../api/auth.api";
 import { getErrorMessage } from "../api/http";
 import MDEditor from "@uiw/react-md-editor";
@@ -13,6 +13,24 @@ export default function PostDetailPage() {
     const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
     const [loading, setLoading] = useState(true);
     const [err, setErr] = useState<string | null>(null);
+    const [deleting, setDeleting] = useState(false);
+
+    const handleDelete = async () => {
+        if (!window.confirm("Are you sure you want to delete this story? This action cannot be undone.")) {
+            return;
+        }
+
+        setDeleting(true);
+        try {
+            if (!id) return;
+            await deletePost(id);
+            nav("/posts");
+        } catch (e: any) {
+            alert("Failed to delete story: " + getErrorMessage(e));
+        } finally {
+            setDeleting(false);
+        }
+    };
 
     useEffect(() => {
         async function load() {
@@ -67,6 +85,9 @@ export default function PostDetailPage() {
                                 <Link to={`/posts/${post.id}/edit`} className="btn-edit">
                                     Edit Story
                                 </Link>
+                                <button onClick={handleDelete} className="btn-delete" disabled={deleting}>
+                                    {deleting ? "Deleting..." : "Delete Story"}
+                                </button>
                                 <span className={`status-badge status-${post.status}`}>
                                     {post.status}
                                 </span>

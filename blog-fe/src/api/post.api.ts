@@ -95,7 +95,7 @@ export async function listPosts(params?: GetPostListParams) {
 
 export async function createDraft(payload: CreatePostPayload) {
     const res = await contentHttp.post("content/api/v1/post", payload);
-    return res.data as PostDetail;
+    return res.data.data as PostDetail;
 }
 
 export async function getPost(id: string) {
@@ -115,5 +115,10 @@ export async function publishPost(id: string) {
 
 export async function unpublishPost(id: string) {
     const res = await contentHttp.put(`/posts/${id}/unpublish`, {});
+    return res.data;
+}
+
+export async function deletePost(id: string) {
+    const res = await contentHttp.delete(`content/api/v1/post/${id}`);
     return res.data;
 }
