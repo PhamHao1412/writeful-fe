@@ -58,6 +58,10 @@
     box-shadow: 0 2px 8px rgba(102, 126, 234, 0.2);
 }
 
+.message-bubble__content--has-reactions {
+    padding-bottom: 22px !important;
+}
+
 .message-bubble--own .message-bubble__content {
     background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
     box-shadow: 0 2px 8px rgba(245, 87, 108, 0.2);

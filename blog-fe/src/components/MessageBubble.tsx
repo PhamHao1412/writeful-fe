@@ -48,12 +48,12 @@ export default function MessageBubble({ message, isOwnMessage, onReply, particip
     const getReactionsTooltip = () => {
         if (reactions.length === 0) return '';
         const getDisplayName = (userId: string) => {
-            if (userId === currentUserId) return 'Bạn';
+            if (userId === currentUserId) return 'You';
             const p = participants.find(part => part.user_id === userId);
             return p?.user?.display_name || p?.user?.username || 'User';
         };
 
-        const names = reactions.map(r => `${getDisplayName(r.user_id)} đã bày tỏ ${r.emoji}`);
+        const names = reactions.map(r => `${getDisplayName(r.user_id)} reacted with ${r.emoji}`);
         return names.join('\n');
     };
 
@@ -94,18 +94,18 @@ export default function MessageBubble({ message, isOwnMessage, onReply, particip
 
         if (isOwnMessage) {
             if (parentSenderId === msgSenderId) {
-                return 'Bạn đã trả lời chính mình';
+                return 'You replied to yourself';
             } else {
-                return `Bạn đã trả lời ${getDisplayName(parentSenderId)}`;
+                return `You replied to ${getDisplayName(parentSenderId)}`;
             }
         } else {
             const senderName = message.sender?.display_name || getDisplayName(msgSenderId);
             if (parentSenderId === msgSenderId) {
-                return `${senderName} đã trả lời chính họ`;
+                return `${senderName} replied to themselves`;
             } else if (currentUserId && parentSenderId === currentUserId) {
-                return `${senderName} đã trả lời bạn`;
+                return `${senderName} replied to you`;
             } else {
-                return `${senderName} đã trả lời ${getDisplayName(parentSenderId)}`;
+                return `${senderName} replied to ${getDisplayName(parentSenderId)}`;
             }
         }
     };
@@ -175,6 +175,8 @@ export default function MessageBubble({ message, isOwnMessage, onReply, particip
                         message.type === 'call' ? 'message-bubble__content--call' : ''
                     } ${
                         message.type === 'image' ? 'message-bubble__content--image' : ''
+                    } ${
+                        totalReactionsCount > 0 ? 'message-bubble__content--has-reactions' : ''
                     }`}>
                         {message.type === 'text' && (
                             <p className="message-bubble__text">{message.content}</p>

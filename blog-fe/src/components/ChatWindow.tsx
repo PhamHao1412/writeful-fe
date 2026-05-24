@@ -381,7 +381,7 @@ export default function ChatWindow({ conversation, currentUserId, onDeleteConver
         if (!replyingToMessage) return '';
         const senderId = replyingToMessage.sender_id;
         if (senderId === currentUserId) {
-            return 'chính mình';
+            return 'yourself';
         }
         const p = conversation.participants.find(part => part.user_id === senderId);
         return p?.user?.display_name || p?.user?.username || 'User';
@@ -682,7 +682,7 @@ export default function ChatWindow({ conversation, currentUserId, onDeleteConver
                     <div className="chat-window__reply-preview-bar">
                         <div className="chat-window__reply-preview-info">
                             <span className="chat-window__reply-preview-title">
-                                Đang trả lời {getReplyingToDisplayName()}
+                                Replying to {getReplyingToDisplayName()}
                             </span>
                             <span className="chat-window__reply-preview-content">
                                 {replyingToMessage.type === 'text'
