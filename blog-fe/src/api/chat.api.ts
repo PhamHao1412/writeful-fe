@@ -16,6 +16,14 @@ export interface Participant {
     };
 }
 
+export interface MessageReaction {
+    id: string;
+    message_id: string;
+    user_id: string;
+    emoji: string;
+    created_at: string;
+}
+
 export interface Message {
     id: string;
     conversation_id: string;
@@ -25,6 +33,7 @@ export interface Message {
     media_url?: string;
     reply_to_message_id?: string;
     reply_to_message?: Message;
+    reactions?: MessageReaction[];
     created_at: string;
     updated_at: string;
     sender?: {
@@ -161,5 +170,13 @@ export async function deleteConversation(conversationId: string, participantId: 
  */
 export async function sendSignaling(req: { type: string; payload: any }): Promise<void> {
     await authHttp.post('/chat/api/v1/messages/signaling', req);
+}
+
+/**
+ * Toggle a reaction on a message
+ */
+export async function toggleReaction(messageId: string, emoji: string): Promise<MessageReaction | null> {
+    const res = await authHttp.post<ApiResponse<MessageReaction | null>>(`/chat/api/v1/messages/${messageId}/reactions`, { emoji });
+    return res.data.data;
 }
 

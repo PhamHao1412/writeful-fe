@@ -265,9 +265,21 @@
     flex-direction: row-reverse;
 }
 
-.message-bubble__reply-btn {
+.message-bubble__actions-row {
+    display: flex;
+    align-items: center;
+    gap: 4px;
     opacity: 0;
     visibility: hidden;
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.message-bubble:hover .message-bubble__actions-row {
+    opacity: 1;
+    visibility: visible;
+}
+
+.message-bubble__action-btn {
     width: 28px;
     height: 28px;
     border-radius: 50%;
@@ -283,19 +295,115 @@
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
-.message-bubble:hover .message-bubble__reply-btn {
-    opacity: 1;
-    visibility: visible;
-}
-
-.message-bubble__reply-btn:hover {
+.message-bubble__action-btn:hover {
     background: #e4e6eb;
     color: #1c1e21;
     transform: scale(1.1);
 }
 
-.message-bubble__reply-btn:active {
+.message-bubble__action-btn:active {
     transform: scale(0.95);
+}
+
+.message-bubble__reaction-trigger-container {
+    position: relative;
+    display: inline-block;
+}
+
+/* Floating Reaction Picker Capsule with Premium Glassmorphism */
+.message-bubble__reaction-picker {
+    position: absolute;
+    bottom: calc(100% + 8px);
+    left: 50%;
+    transform: translateX(-50%) scale(0.9);
+    display: flex;
+    gap: 8px;
+    padding: 6px 12px;
+    background: rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(12px) saturate(180%);
+    -webkit-backdrop-filter: blur(12px) saturate(180%);
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    border-radius: 24px;
+    box-shadow: 0 8px 32px rgba(31, 38, 135, 0.15), 
+                0 4px 8px rgba(0, 0, 0, 0.05);
+    z-index: 100;
+    opacity: 0;
+    visibility: hidden;
+    animation: reactionPickerFadeIn 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+@keyframes reactionPickerFadeIn {
+    to {
+        opacity: 1;
+        visibility: visible;
+        transform: translateX(-50%) scale(1);
+    }
+}
+
+.message-bubble__reaction-emoji-btn {
+    font-size: 20px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 2px;
+    transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.message-bubble__reaction-emoji-btn:hover {
+    transform: scale(1.35) translateY(-4px);
+}
+
+.message-bubble__reaction-emoji-btn:active {
+    transform: scale(0.9);
+}
+
+.message-bubble__reaction-emoji-btn--active {
+    background: rgba(102, 126, 234, 0.15);
+    border-radius: 50%;
+}
+
+/* Reaction Pills overlapping the bubble bottom */
+.message-bubble__reactions-pill {
+    position: absolute;
+    bottom: -10px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 6px;
+    background: rgba(255, 255, 255, 0.95);
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    border-radius: 12px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+    cursor: pointer;
+    z-index: 10;
+    transition: all 0.2s ease;
+    user-select: none;
+}
+
+.message-bubble__reactions-pill--own {
+    right: 12px;
+}
+
+.message-bubble__reactions-pill--other {
+    left: 12px;
+}
+
+.message-bubble__reactions-pill:hover {
+    background: #ffffff;
+    transform: scale(1.08);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.12);
+}
+
+.message-bubble__reactions-emojis {
+    font-size: 13px;
+    letter-spacing: -2px;
+}
+
+.message-bubble__reactions-count {
+    font-size: 11px;
+    font-weight: 700;
+    color: #65676b;
+    padding-left: 2px;
 }
 
 /* Replied message preview box above bubble */

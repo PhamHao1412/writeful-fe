@@ -1,4 +1,6 @@
 import type { Message, Participant } from '../api/chat.api';
+import { toggleReaction } from '../api/chat.api';
+import { useState, useEffect, useRef } from 'react';
 import '../styles/MessageBubble.css';
 
 interface MessageBubbleProps {
@@ -10,6 +12,51 @@ interface MessageBubbleProps {
 }
 
 export default function MessageBubble({ message, isOwnMessage, onReply, participants = [], currentUserId }: MessageBubbleProps) {
+    const [showReactionPicker, setShowReactionPicker] = useState(false);
+    const pickerRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (pickerRef.current && !pickerRef.current.contains(event.target as Node)) {
+                setShowReactionPicker(false);
+            }
+        };
+
+        if (showReactionPicker) {
+            document.addEventListener('mousedown', handleClickOutside);
+        }
+
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, [showReactionPicker]);
+
+    const handleToggleReaction = async (emoji: string) => {
+        setShowReactionPicker(false);
+        try {
+            await toggleReaction(message.id, emoji);
+        } catch (error) {
+            console.error('Error toggling reaction:', error);
+        }
+    };
+
+    const reactions = message.reactions || [];
+    const uniqueEmojis = Array.from(new Set(reactions.map(r => r.emoji)));
+    const totalReactionsCount = reactions.length;
+    const myReaction = reactions.find(r => r.user_id === currentUserId);
+
+    const getReactionsTooltip = () => {
+        if (reactions.length === 0) return '';
+        const getDisplayName = (userId: string) => {
+            if (userId === currentUserId) return 'Bạn';
+            const p = participants.find(part => part.user_id === userId);
+            return p?.user?.display_name || p?.user?.username || 'User';
+        };
+
+        const names = reactions.map(r => `${getDisplayName(r.user_id)} đã bày tỏ ${r.emoji}`);
+        return names.join('\n');
+    };
+
     const formatTime = (dateString: string) => {
         const date = new Date(dateString);
         const now = new Date();
@@ -173,16 +220,68 @@ export default function MessageBubble({ message, isOwnMessage, onReply, particip
                         <div className="message-bubble__time">{formatTime(message.created_at)}</div>
                     </div>
 
-                    {onReply && message.type !== 'call' && (
-                        <button
-                            type="button"
-                            className="message-bubble__reply-btn"
-                            onClick={() => onReply(message)}
-                            title="Reply to this message"
+                    {totalReactionsCount > 0 && (
+                        <div 
+                            className={`message-bubble__reactions-pill ${
+                                isOwnMessage ? 'message-bubble__reactions-pill--own' : 'message-bubble__reactions-pill--other'
+                            }`}
+                            onClick={myReaction ? () => handleToggleReaction(myReaction.emoji) : undefined}
+                            title={getReactionsTooltip()}
                         >
-                            ↩
-                        </button>
+                            <span className="message-bubble__reactions-emojis">
+                                {uniqueEmojis.join('')}
+                            </span>
+                            {totalReactionsCount > 1 && (
+                                <span className="message-bubble__reactions-count">{totalReactionsCount}</span>
+                            )}
+                        </div>
                     )}
+
+                    <div className="message-bubble__actions-row">
+                        {onReply && message.type !== 'call' && (
+                            <button
+                                type="button"
+                                className="message-bubble__action-btn message-bubble__reply-btn"
+                                onClick={() => onReply(message)}
+                                title="Reply to this message"
+                            >
+                                ↩
+                            </button>
+                        )}
+
+                        {message.type !== 'call' && (
+                            <div className="message-bubble__reaction-trigger-container">
+                                <button
+                                    type="button"
+                                    className={`message-bubble__action-btn message-bubble__react-btn ${
+                                        showReactionPicker ? 'message-bubble__react-btn--active' : ''
+                                    }`}
+                                    onClick={() => setShowReactionPicker(!showReactionPicker)}
+                                    title="React to this message"
+                                >
+                                    😀
+                                </button>
+
+                                {showReactionPicker && (
+                                    <div className="message-bubble__reaction-picker" ref={pickerRef}>
+                                        {['👍', '❤️', '😂', '😮', '😢', '🙏'].map(emoji => (
+                                            <button
+                                                key={emoji}
+                                                type="button"
+                                                className={`message-bubble__reaction-emoji-btn ${
+                                                    myReaction?.emoji === emoji ? 'message-bubble__reaction-emoji-btn--active' : ''
+                                                }`}
+                                                onClick={() => handleToggleReaction(emoji)}
+                                                title={emoji}
+                                            >
+                                                {emoji}
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                    </div>
                 </div>
             </div>
         </div>

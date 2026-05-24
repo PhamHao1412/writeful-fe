@@ -315,6 +315,34 @@ export default function ChatWindow({ conversation, currentUserId, onDeleteConver
                         return next;
                     });
                 }
+            } else if (data.type === 'message_reaction') {
+                const { message_id, user_id, emoji, action } = data.payload;
+                setMessages(prev => prev.map(msg => {
+                    if (msg.id !== message_id) return msg;
+
+                    const currentReactions = msg.reactions || [];
+                    let updatedReactions = [...currentReactions];
+
+                    if (action === 'remove') {
+                        updatedReactions = updatedReactions.filter(r => r.user_id !== user_id);
+                    } else if (action === 'add') {
+                        if (!updatedReactions.some(r => r.user_id === user_id)) {
+                            updatedReactions.push({
+                                id: Math.random().toString(),
+                                message_id,
+                                user_id,
+                                emoji,
+                                created_at: new Date().toISOString()
+                            });
+                        }
+                    } else if (action === 'update') {
+                        updatedReactions = updatedReactions.map(r =>
+                            r.user_id === user_id ? { ...r, emoji } : r
+                        );
+                    }
+
+                    return { ...msg, reactions: updatedReactions };
+                }));
             }
         });
 
@@ -623,14 +651,14 @@ export default function ChatWindow({ conversation, currentUserId, onDeleteConver
             {selectedImage && (
                 <div className="chat-window__preview-bar">
                     <div className="chat-window__preview-container">
-                        <img 
-                            src={URL.createObjectURL(selectedImage)} 
-                            alt="Selected upload preview" 
-                            className="chat-window__preview-img" 
+                        <img
+                            src={URL.createObjectURL(selectedImage)}
+                            alt="Selected upload preview"
+                            className="chat-window__preview-img"
                         />
-                        <button 
-                            type="button" 
-                            className="chat-window__preview-remove" 
+                        <button
+                            type="button"
+                            className="chat-window__preview-remove"
                             onClick={handleRemoveImage}
                             disabled={isSending || isUploading}
                             title="Remove image"
@@ -657,18 +685,18 @@ export default function ChatWindow({ conversation, currentUserId, onDeleteConver
                                 Đang trả lời {getReplyingToDisplayName()}
                             </span>
                             <span className="chat-window__reply-preview-content">
-                                {replyingToMessage.type === 'text' 
-                                    ? replyingToMessage.content 
-                                    : replyingToMessage.type === 'image' 
-                                        ? '📷 Photo' 
-                                        : replyingToMessage.type === 'file' 
-                                            ? '📎 File' 
+                                {replyingToMessage.type === 'text'
+                                    ? replyingToMessage.content
+                                    : replyingToMessage.type === 'image'
+                                        ? '📷 Photo'
+                                        : replyingToMessage.type === 'file'
+                                            ? '📎 File'
                                             : '📞 Call'}
                             </span>
                         </div>
-                        <button 
-                            type="button" 
-                            className="chat-window__reply-preview-close" 
+                        <button
+                            type="button"
+                            className="chat-window__reply-preview-close"
                             onClick={() => setReplyingToMessage(null)}
                             title="Cancel reply"
                         >
@@ -685,7 +713,7 @@ export default function ChatWindow({ conversation, currentUserId, onDeleteConver
                     style={{ display: 'none' }}
                     id="chat-image-input"
                 />
-                
+
                 <div className="chat-window__input-capsule">
                     {/* Left: Emoji Button */}
                     <button
