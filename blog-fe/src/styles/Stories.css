@@ -1341,6 +1341,103 @@
   color: #ff6b6b;
 }
 
+/* Story Creator Trimmer Section */
+.story-creator-page__trimmer {
+  margin-top: 14px;
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 12px;
+  padding: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(10px);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.story-creator-page__trimmer-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.story-creator-page__trimmer-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #fff;
+  opacity: 0.9;
+}
+
+.story-creator-page__trimmer-play-btn {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #fff;
+  border-radius: 50%;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 11px;
+  transition: all 0.2s ease;
+}
+
+.story-creator-page__trimmer-play-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: #0095f6;
+  transform: scale(1.08);
+}
+
+.story-creator-page__trimmer-slider-container {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.story-creator-page__trimmer-slider {
+  -webkit-appearance: none;
+  width: 100%;
+  height: 5px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.12);
+  outline: none;
+  cursor: pointer;
+  transition: background 0.3s;
+}
+
+.story-creator-page__trimmer-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #0095f6;
+  border: 2px solid #fff;
+  cursor: pointer;
+  box-shadow: 0 0 8px rgba(0, 149, 246, 0.6);
+  transition: transform 0.1s, background-color 0.2s;
+}
+
+.story-creator-page__trimmer-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.2);
+  background: #18abff;
+}
+
+.story-creator-page__trimmer-timeinfo {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.story-creator-page__trimmer-duration {
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.35);
+  text-align: center;
+  margin-top: 2px;
+}
+
 .story-creator-page__sidebar-footer {
   padding: 16px 24px 24px;
   border-top: 1px solid rgba(255, 255, 255, 0.1);

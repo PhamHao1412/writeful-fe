@@ -105,6 +105,24 @@ export function StoryViewerModal({ groups, initialGroupIndex, onClose }: StoryVi
       audio.loop = true;
       audio.volume = isMuted ? 0 : 0.4;
       
+      const offset = currentSlide.audio_offset || 0;
+      
+      // Seek to the custom offset
+      audio.currentTime = offset;
+      
+      audio.addEventListener("loadedmetadata", () => {
+        audio.currentTime = offset;
+      });
+
+      audio.addEventListener("timeupdate", () => {
+        if (audio.currentTime >= offset + 10) {
+          audio.currentTime = offset;
+        }
+        if (audio.currentTime < offset) {
+          audio.currentTime = offset;
+        }
+      });
+      
       if (!isPaused) {
         audio.play().catch(e => console.log("Autoplay blocked by browser policy until interaction:", e));
       }

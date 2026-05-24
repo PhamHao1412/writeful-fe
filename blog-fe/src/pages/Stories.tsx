@@ -62,7 +62,7 @@ export default function StoriesPage() {
       }
     } catch (err) {
       console.error("Failed to load stories:", err);
-      showToast("Không thể tải tin mới.", "error");
+      showToast("Failed to load stories.", "error");
     }
   };
 
@@ -152,6 +152,24 @@ export default function StoriesPage() {
       audio.loop = true;
       audio.volume = isMuted ? 0 : 0.4;
       
+      const offset = currentSlide.audio_offset || 0;
+      
+      // Seek to the custom offset
+      audio.currentTime = offset;
+      
+      audio.addEventListener("loadedmetadata", () => {
+        audio.currentTime = offset;
+      });
+
+      audio.addEventListener("timeupdate", () => {
+        if (audio.currentTime >= offset + 10) {
+          audio.currentTime = offset;
+        }
+        if (audio.currentTime < offset) {
+          audio.currentTime = offset;
+        }
+      });
+      
       if (!isPaused) {
         audio.play().catch(e => console.log("Autoplay blocked by browser policy until interaction:", e));
       }
@@ -214,6 +232,23 @@ export default function StoriesPage() {
     }
   };
 
+  // Close stories viewer on Escape key press
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        handleCloseAndGoBack();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [groups, currentGroupIdx]);
+
+  const handleBackgroundClick = () => {
+    handleCloseAndGoBack();
+  };
+
   const handleNextSlide = () => {
     if (currentSlideIdx < (currentGroup?.stories?.length || 0) - 1) {
       setCurrentSlideIdx(prev => prev + 1);
@@ -238,7 +273,7 @@ export default function StoriesPage() {
       if (!room || !room.id) throw new Error("Failed to get room ID");
 
       // 2. Format custom Story reply message
-      const formattedContent = `${reactContent} \n\n[Phản hồi tin của bạn: ${currentSlide.media_url}]`;
+      const formattedContent = `${reactContent} \n\n[Replied to your story: ${currentSlide.media_url}]`;
 
       // 3. Send message
       await sendMessage({
@@ -247,11 +282,11 @@ export default function StoriesPage() {
         content: formattedContent
       });
 
-      showToast("Đã gửi tin nhắn cảm xúc tới chat!", "success");
+      showToast("Story reply sent to chat!", "success");
       setReplyText("");
     } catch (err) {
       console.error(err);
-      showToast("Không thể gửi phản hồi.", "error");
+      showToast("Failed to send reply.", "error");
     } finally {
       setSendingReply(false);
       setIsPaused(false); // Resume story slider
@@ -279,12 +314,12 @@ export default function StoriesPage() {
       <div className="story-viewer__sidebar">
         <div className="story-viewer__sidebar-header">
           <div className="story-viewer__sidebar-header-top">
-            <button className="story-viewer__sidebar-close" onClick={() => nav("/posts")} title="Quay lại">
+            <button className="story-viewer__sidebar-close" onClick={() => nav("/posts")} title="Back">
               &larr;
             </button>
-            <span className="story-viewer__sidebar-logo">Writeful Tin</span>
+            <span className="story-viewer__sidebar-logo">Writeful Stories</span>
           </div>
-          <h2 className="story-viewer__sidebar-title">Tin</h2>
+          <h2 className="story-viewer__sidebar-title">Stories</h2>
         </div>
 
         <div className="story-viewer__sidebar-list">
@@ -293,7 +328,7 @@ export default function StoriesPage() {
             className="story-viewer__sidebar-subtitle" 
             style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}
           >
-            <span>Tin của bạn</span>
+            <span>Your Story</span>
             <button 
               onClick={() => nav("/stories/create")}
               style={{
@@ -311,7 +346,7 @@ export default function StoriesPage() {
                 justifyContent: "center",
                 transition: "background-color 0.2s"
               }}
-              title="Tạo tin mới"
+              title="Create story"
             >
               +
             </button>
@@ -333,8 +368,8 @@ export default function StoriesPage() {
                 />
               </div>
               <div className="story-viewer__sidebar-item-meta">
-                <span className="story-viewer__sidebar-username">Tin của bạn</span>
-                <span className="story-viewer__sidebar-time">Xem tin của bạn</span>
+                <span className="story-viewer__sidebar-username">Your Story</span>
+                <span className="story-viewer__sidebar-time">View your active story</span>
               </div>
             </div>
           ) : (
@@ -351,18 +386,18 @@ export default function StoriesPage() {
                 />
               </div>
               <div className="story-viewer__sidebar-item-meta">
-                <span className="story-viewer__sidebar-username">Tạo tin mới</span>
-                <span className="story-viewer__sidebar-time">Chia sẻ ảnh hoặc viết gì đó</span>
+                <span className="story-viewer__sidebar-username">Create Story</span>
+                <span className="story-viewer__sidebar-time">Share a photo or write caption</span>
               </div>
             </div>
           )}
 
           <div style={{ margin: "12px 0", borderBottom: "1px solid rgba(255,255,255,0.08)" }} />
 
-          <span className="story-viewer__sidebar-subtitle">Tất cả tin</span>
+          <span className="story-viewer__sidebar-subtitle">All Stories</span>
           {groups.length === 0 ? (
             <div style={{ padding: "16px", textAlign: "center", color: "rgba(255,255,255,0.4)", fontSize: "14px" }}>
-              Chưa có tin nào được đăng.
+              No active stories available.
             </div>
           ) : (
             groups.map((group, idx) => {
@@ -398,14 +433,14 @@ export default function StoriesPage() {
       </div>
 
       {/* Main black viewer screen */}
-      <div className="story-viewer__main">
+      <div className="story-viewer__main" onClick={handleBackgroundClick}>
         {groups.length === 0 ? (
-          <div style={{ textAlign: "center", padding: "40px" }}>
+          <div style={{ textAlign: "center", padding: "40px" }} onClick={e => e.stopPropagation()}>
             <div style={{ fontSize: "64px", marginBottom: "20px" }}>📱</div>
-            <h3 style={{ fontSize: "20px", fontWeight: "600", marginBottom: "8px" }}>Kho lưu trữ trống</h3>
-            <p style={{ color: "rgba(255,255,255,0.5)", fontSize: "14px", marginBottom: "24px" }}>Hãy là người đầu tiên đăng tải tin mới!</p>
+            <h3 style={{ fontSize: "20px", fontWeight: "600", marginBottom: "8px" }}>Empty Library</h3>
+            <p style={{ color: "rgba(255,255,255,0.5)", fontSize: "14px", marginBottom: "24px" }}>Be the first to share an active story today!</p>
             <button className="btn btn--primary" onClick={() => nav("/stories/create")}>
-              + Tạo tin ngay
+              + Create Story
             </button>
           </div>
         ) : (
@@ -415,7 +450,10 @@ export default function StoriesPage() {
               <button
                 type="button"
                 className="story-viewer__nav-btn story-viewer__nav-btn--prev"
-                onClick={handlePrevSlide}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handlePrevSlide();
+                }}
               >
                 &#10094;
               </button>
@@ -425,14 +463,17 @@ export default function StoriesPage() {
               <button
                 type="button"
                 className="story-viewer__nav-btn story-viewer__nav-btn--next"
-                onClick={handleNextSlide}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleNextSlide();
+                }}
               >
                 &#10095;
               </button>
             )}
 
             {/* Aspect Ratio Card wrapper (9:16) */}
-            <div className="story-viewer__card-wrapper">
+            <div className="story-viewer__card-wrapper" onClick={e => e.stopPropagation()}>
               {/* Custom Progress Indicators */}
               <div className="story-viewer__progress-container">
                 {currentGroup?.stories?.map((st, idx) => {
@@ -471,7 +512,7 @@ export default function StoriesPage() {
                     <button
                       className="story-viewer__btn"
                       onClick={() => setIsMuted(!isMuted)}
-                      title={isMuted ? "Bật âm thanh" : "Tắt âm thanh"}
+                      title={isMuted ? "Unmute" : "Mute"}
                     >
                       {isMuted ? "🔇" : "🔊"}
                     </button>
@@ -480,7 +521,7 @@ export default function StoriesPage() {
                   <button
                     className="story-viewer__btn"
                     onClick={() => setIsPaused(!isPaused)}
-                    title={isPaused ? "Phát tin" : "Tạm dừng"}
+                    title={isPaused ? "Play slide" : "Pause slide"}
                   >
                     {isPaused ? "▶️" : "⏸️"}
                   </button>
@@ -565,7 +606,7 @@ export default function StoriesPage() {
               <form className="story-viewer__reply-form" onSubmit={handleTextReplySubmit}>
                 <input
                   type="text"
-                  placeholder={`Gửi phản hồi cho ${currentGroup?.username}...`}
+                  placeholder={`Send reply to ${currentGroup?.username}...`}
                   className="story-viewer__reply-input"
                   value={replyText}
                   onChange={e => setReplyText(e.target.value)}
@@ -577,7 +618,7 @@ export default function StoriesPage() {
                     className="story-viewer__reply-send"
                     disabled={sendingReply}
                   >
-                    Gửi
+                    Send
                   </button>
                 )}
               </form>

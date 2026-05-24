@@ -36,6 +36,18 @@ export default function StoriesCreate() {
   const [customGenre, setCustomGenre] = useState<string>("vpop");
   const [uploadingAudio, setUploadingAudio] = useState(false);
 
+  // Audio trimmer states & refs
+  const [audioOffset, setAudioOffset] = useState<number>(0);
+  const [trackDuration, setTrackDuration] = useState<number>(60);
+  const [isTrimPlayerPlaying, setIsTrimPlayerPlaying] = useState<boolean>(false);
+  const audioOffsetRef = useRef<number>(0);
+
+  const formatTime = (secs: number) => {
+    const m = Math.floor(secs / 60);
+    const s = Math.floor(secs % 60);
+    return `${m}:${s < 10 ? "0" : ""}${s}`;
+  };
+
   const fileInputRef = useRef<HTMLInputElement>(null);
   const audioInputRef = useRef<HTMLInputElement>(null);
 
@@ -82,6 +94,9 @@ export default function StoriesCreate() {
   const handlePlayPreview = (track: MusicTrack) => {
     if (!track.url) return;
 
+    // Reset trimmer preview state
+    setIsTrimPlayerPlaying(false);
+
     if (previewTrackId === track.id) {
       // Pause
       if (audioPlayerRef.current) {
@@ -113,12 +128,79 @@ export default function StoriesCreate() {
 
   const handleSelectTrack = (track: MusicTrack) => {
     setSelectedTrack(track);
+    setAudioOffset(0);
+    audioOffsetRef.current = 0;
+    setIsTrimPlayerPlaying(false);
     setIsMusicDrawerOpen(false);
+    
     if (audioPlayerRef.current) {
       audioPlayerRef.current.pause();
-      setPreviewTrackId(null);
+      audioPlayerRef.current = null;
+    }
+    setPreviewTrackId(null);
+
+    // Fetch song length metadata dynamically
+    if (track.url) {
+      const temp = new Audio(track.url);
+      temp.addEventListener("loadedmetadata", () => {
+        setTrackDuration(temp.duration || 60);
+      });
     }
     showToast(`Added track: ${track.title}`, "success");
+  };
+
+  const handleToggleTrimPlay = () => {
+    if (!selectedTrack?.url) return;
+
+    // Reset drawer preview if active
+    setPreviewTrackId(null);
+
+    if (isTrimPlayerPlaying) {
+      if (audioPlayerRef.current) {
+        audioPlayerRef.current.pause();
+      }
+      setIsTrimPlayerPlaying(false);
+    } else {
+      if (audioPlayerRef.current) {
+        audioPlayerRef.current.pause();
+      }
+      
+      const player = new Audio(selectedTrack.url);
+      player.volume = 0.5;
+      player.currentTime = audioOffset;
+      
+      player.addEventListener("timeupdate", () => {
+        const currentOffset = audioOffsetRef.current;
+        if (player.currentTime >= currentOffset + 10) {
+          player.currentTime = currentOffset;
+        }
+        if (player.currentTime < currentOffset) {
+          player.currentTime = currentOffset;
+        }
+      });
+      
+      player.play()
+        .then(() => {
+          setIsTrimPlayerPlaying(true);
+        })
+        .catch(e => console.error("Audio play failed:", e));
+      
+      player.onended = () => {
+        setIsTrimPlayerPlaying(false);
+      };
+      
+      audioPlayerRef.current = player;
+    }
+  };
+
+  const handleOffsetChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = parseFloat(e.target.value);
+    setAudioOffset(val);
+    audioOffsetRef.current = val;
+    
+    if (audioPlayerRef.current && isTrimPlayerPlaying) {
+      audioPlayerRef.current.currentTime = val;
+    }
   };
 
   // Custom MP3 Contribution Upload
@@ -186,6 +268,7 @@ export default function StoriesCreate() {
         audio_url: selectedTrack?.url || undefined,
         audio_title: selectedTrack?.title || undefined,
         audio_artist: selectedTrack?.artist || undefined,
+        audio_offset: selectedTrack ? Math.floor(audioOffset) : undefined,
       });
 
       showToast("Story published successfully for 24h!", "success");
@@ -295,31 +378,71 @@ export default function StoriesCreate() {
                     🎵 Add Music
                   </button>
                 ) : (
-                  <div className="story-creator-page__selected-music-card">
-                    <img 
-                      src={selectedTrack.cover_url || "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=150"} 
-                      alt="Album Cover" 
-                      className="story-creator-page__selected-music-cover"
-                    />
-                    <div className="story-creator-page__selected-music-info">
-                      <span className="story-creator-page__selected-music-title">{selectedTrack.title}</span>
-                      <span className="story-creator-page__selected-music-artist">{selectedTrack.artist}</span>
-                    </div>
-                    <button
-                      type="button"
-                      className="story-creator-page__remove-music-btn"
-                      onClick={() => {
-                        setSelectedTrack(null);
-                        if (audioPlayerRef.current) {
-                          audioPlayerRef.current.pause();
+                  <>
+                    <div className="story-creator-page__selected-music-card">
+                      <img 
+                        src={selectedTrack.cover_url || "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=150"} 
+                        alt="Album Cover" 
+                        className="story-creator-page__selected-music-cover"
+                      />
+                      <div className="story-creator-page__selected-music-info">
+                        <span className="story-creator-page__selected-music-title">{selectedTrack.title}</span>
+                        <span className="story-creator-page__selected-music-artist">{selectedTrack.artist}</span>
+                      </div>
+                      <button
+                        type="button"
+                        className="story-creator-page__remove-music-btn"
+                        onClick={() => {
+                          setSelectedTrack(null);
+                          setAudioOffset(0);
+                          audioOffsetRef.current = 0;
+                          setIsTrimPlayerPlaying(false);
+                          if (audioPlayerRef.current) {
+                            audioPlayerRef.current.pause();
+                            audioPlayerRef.current = null;
+                          }
                           setPreviewTrackId(null);
-                        }
-                      }}
-                      title="Remove soundtrack"
-                    >
-                      ✕
-                    </button>
-                  </div>
+                        }}
+                        title="Remove soundtrack"
+                      >
+                        ✕
+                      </button>
+                    </div>
+
+                    {/* Timeline Trimmer Section */}
+                    <div className="story-creator-page__trimmer">
+                      <div className="story-creator-page__trimmer-header">
+                        <span className="story-creator-page__trimmer-title">🎵 Đoạn nhạc phát (10 giây)</span>
+                        <button
+                          type="button"
+                          className="story-creator-page__trimmer-play-btn"
+                          onClick={handleToggleTrimPlay}
+                          title={isTrimPlayerPlaying ? "Pause preview" : "Play preview segment"}
+                        >
+                          {isTrimPlayerPlaying ? "⏸️" : "▶️"}
+                        </button>
+                      </div>
+                      
+                      <div className="story-creator-page__trimmer-slider-container">
+                        <input
+                          type="range"
+                          min={0}
+                          max={Math.max(0, trackDuration - 10)}
+                          step={1}
+                          value={audioOffset}
+                          onChange={handleOffsetChange}
+                          className="story-creator-page__trimmer-slider"
+                        />
+                        <div className="story-creator-page__trimmer-timeinfo">
+                          <span>{formatTime(audioOffset)}</span>
+                          <span>{formatTime(audioOffset + 10)}</span>
+                        </div>
+                        <div className="story-creator-page__trimmer-duration">
+                          Độ dài bài hát: {formatTime(trackDuration)}
+                        </div>
+                      </div>
+                    </div>
+                  </>
                 )}
               </div>
             </>
@@ -536,7 +659,7 @@ export default function StoriesCreate() {
                       <img 
                         src={selectedTrack.cover_url || "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=100"} 
                         alt="Spinning Cover" 
-                        className={`story-creator-page__sticker-vinyl ${previewTrackId === (selectedTrack.id || selectedTrack.title) ? "story-creator-page__sticker-vinyl--spinning" : ""}`}
+                        className={`story-creator-page__sticker-vinyl ${previewTrackId === (selectedTrack.id || selectedTrack.title) || isTrimPlayerPlaying ? "story-creator-page__sticker-vinyl--spinning" : ""}`}
                       />
                       <span className="story-creator-page__sticker-notes">🎵</span>
                     </div>

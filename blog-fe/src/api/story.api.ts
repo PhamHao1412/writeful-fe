@@ -19,6 +19,7 @@ export interface StoryDisplayDTO {
   audio_url?: string;
   audio_title?: string;
   audio_artist?: string;
+  audio_offset?: number;
   created_at: string;
   expires_at: string;
   seen: boolean;
@@ -45,6 +46,7 @@ export const storyApi = {
     audio_url?: string;
     audio_title?: string;
     audio_artist?: string;
+    audio_offset?: number;
   }) => {
     return contentHttp.post('/content/api/v1/stories', data);
   },
