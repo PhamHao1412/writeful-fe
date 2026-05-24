@@ -38,63 +38,7 @@ export default function ChatWindow({ conversation, currentUserId, onDeleteConver
     const inputRef = useRef<HTMLInputElement>(null);
     const emojiPickerRef = useRef<HTMLDivElement>(null);
 
-    // Automatically mark conversation as read when new messages are received while viewing
-    useEffect(() => {
-        if (messages.length === 0) return;
-        const lastMsg = messages[messages.length - 1];
-        if (lastMsg.sender_id !== currentUserId && lastMsg.id !== lastMarkedMessageId) {
-            // Only automatically mark as read if the browser/tab is actively focused AND the user is actively focused on the input (shows intent to interact)
-            if (document.hasFocus() && document.activeElement === inputRef.current) {
-                setLastMarkedMessageId(lastMsg.id);
-                markConversationAsRead(conversation.id)
-                    .then(() => {
-                        // Dispatch optimistic event to update unread counts
-                        window.dispatchEvent(new CustomEvent('conversation-read', {
-                            detail: { conversationId: conversation.id }
-                        }));
-                    })
-                    .catch((error) => {
-                        console.error('Error marking conversation as read on new message:', error);
-                        setLastMarkedMessageId(null);
-                    });
-            }
-        }
-    }, [messages, conversation.id, currentUserId, lastMarkedMessageId]);
 
-    // Handle window focus to mark conversation as read when the user actively returns to the tab
-    useEffect(() => {
-        const handleWindowFocus = () => {
-            if (messages.length === 0) return;
-            const lastMsg = messages[messages.length - 1];
-            if (lastMsg.sender_id !== currentUserId && lastMsg.id !== lastMarkedMessageId) {
-                // If they return to the tab and the input is focused, mark as read
-                if (document.activeElement === inputRef.current) {
-                    setLastMarkedMessageId(lastMsg.id);
-                    markConversationAsRead(conversation.id)
-                        .then(() => {
-                            window.dispatchEvent(new CustomEvent('conversation-read', {
-                                detail: { conversationId: conversation.id }
-                            }));
-                        })
-                        .catch((error) => {
-                            console.error('Error marking conversation as read on window focus:', error);
-                            setLastMarkedMessageId(null);
-                        });
-                }
-            }
-        };
-
-        window.addEventListener('focus', handleWindowFocus);
-        
-        // Check immediately in case the component has focused on mount
-        if (document.hasFocus() && document.activeElement === inputRef.current) {
-            handleWindowFocus();
-        }
-
-        return () => {
-            window.removeEventListener('focus', handleWindowFocus);
-        };
-    }, [messages, conversation.id, currentUserId, lastMarkedMessageId]);
 
     // Periodic tick to update "last active X minutes ago" text in real-time
     const [, setTick] = useState(0);
@@ -512,6 +456,9 @@ export default function ChatWindow({ conversation, currentUserId, onDeleteConver
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setInputValue(e.target.value);
+
+        // Mark as read immediately when user starts typing a reply
+        handleInputClick();
 
         // Send typing indicator
         chatWebSocket.sendTypingIndicator(conversation.id, currentUserId, true);
