@@ -49,7 +49,7 @@ export default function Chat() {
         return unsubscribe;
     }, []);
 
-    // Listen for real-time user online/offline status updates
+    // Listen for real-time user online/offline status updates and read receipts
     useEffect(() => {
         const unsubscribe = chatWebSocket.onMessage((data) => {
             if (data.type === 'online_users') {
@@ -76,6 +76,39 @@ export default function Chat() {
                         ...prev,
                         [user_id]: { isOnline: false, lastActiveAt: last_active_at }
                     }));
+                }
+            } else if (data.type === 'read') {
+                const { conversation_id, user_id, read_at } = data.payload || {};
+                if (conversation_id && user_id) {
+                    // Update conversations participant's last_read_at
+                    setConversations(prev => prev.map(conv => {
+                        if (conv.id === conversation_id) {
+                            return {
+                                ...conv,
+                                participants: conv.participants.map(p => 
+                                    p.user_id === user_id 
+                                        ? { ...p, last_read_at: read_at } 
+                                        : p
+                                )
+                            };
+                        }
+                        return conv;
+                    }));
+
+                    // Also update selectedConversation if matches
+                    setSelectedConversation(prev => {
+                        if (prev && prev.id === conversation_id) {
+                            return {
+                                ...prev,
+                                participants: prev.participants.map(p => 
+                                    p.user_id === user_id 
+                                        ? { ...p, last_read_at: read_at } 
+                                        : p
+                                )
+                            };
+                        }
+                        return prev;
+                    });
                 }
             }
         });

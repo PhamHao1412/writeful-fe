@@ -28,11 +28,34 @@ export default function ChatWindow({ conversation, currentUserId, onDeleteConver
     const [isSending, setIsSending] = useState(false);
     const [typingUsers, setTypingUsers] = useState<Set<string>>(new Set<string>());
     const [hasMarkedAsRead, setHasMarkedAsRead] = useState(false);
+    const [lastMarkedMessageId, setLastMarkedMessageId] = useState<string | null>(null);
     const [showEmojiPicker, setShowEmojiPicker] = useState(false);
     const messagesEndRef = useRef<HTMLDivElement>(null);
+    const messagesContainerRef = useRef<HTMLDivElement>(null);
+    const isInitialLoadRef = useRef(true);
     const typingTimeoutRef = useRef<number | null>(null);
     const inputRef = useRef<HTMLInputElement>(null);
     const emojiPickerRef = useRef<HTMLDivElement>(null);
+
+    // Automatically mark conversation as read when new messages are received while viewing
+    useEffect(() => {
+        if (messages.length === 0) return;
+        const lastMsg = messages[messages.length - 1];
+        if (lastMsg.sender_id !== currentUserId && lastMsg.id !== lastMarkedMessageId) {
+            setLastMarkedMessageId(lastMsg.id);
+            markConversationAsRead(conversation.id)
+                .then(() => {
+                    // Dispatch optimistic event to update unread counts
+                    window.dispatchEvent(new CustomEvent('conversation-read', {
+                        detail: { conversationId: conversation.id }
+                    }));
+                })
+                .catch((error) => {
+                    console.error('Error marking conversation as read on new message:', error);
+                    setLastMarkedMessageId(null);
+                });
+        }
+    }, [messages, conversation.id, currentUserId, lastMarkedMessageId]);
 
     // Periodic tick to update "last active X minutes ago" text in real-time
     const [, setTick] = useState(0);
@@ -83,6 +106,30 @@ export default function ChatWindow({ conversation, currentUserId, onDeleteConver
 
         const diffInDays = Math.floor(diffInHours / 24);
         return `Active ${diffInDays}d ago`;
+    };
+
+    const getOtherParticipantAvatar = () => {
+        if (conversation.type === 'group') {
+            return '';
+        }
+        const otherParticipant = conversation.participants.find(p => p.user_id !== currentUserId);
+        const name = otherParticipant?.user?.display_name || otherParticipant?.user?.username || 'Unknown User';
+        return otherParticipant?.user?.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random`;
+    };
+
+    const isLastMessageSeen = () => {
+        if (messages.length === 0) return false;
+        const lastMsg = messages[messages.length - 1];
+        if (lastMsg.sender_id !== currentUserId) return false;
+
+        if (conversation.type === 'group') return false;
+        const otherParticipant = conversation.participants.find(p => p.user_id !== currentUserId);
+        if (!otherParticipant || !otherParticipant.last_read_at) return false;
+
+        const lastReadTime = new Date(otherParticipant.last_read_at).getTime();
+        const lastMsgTime = new Date(lastMsg.created_at).getTime();
+
+        return lastReadTime >= lastMsgTime - 1000;
     };
 
     // Image upload states & reference
@@ -181,14 +228,49 @@ export default function ChatWindow({ conversation, currentUserId, onDeleteConver
 
     // Load messages when conversation changes
     useEffect(() => {
+        isInitialLoadRef.current = true; // Mark as initial load for this conversation
         loadMessages();
         setHasMarkedAsRead(false); // Reset when conversation changes
+        setLastMarkedMessageId(null); // Reset last marked message ID to allow marking new conversation read
     }, [conversation.id]);
 
     // Scroll to bottom when messages change
     useEffect(() => {
-        scrollToBottom();
+        if (messages.length > 0) {
+            if (isInitialLoadRef.current) {
+                // Initial load: scroll instantly to avoid smooth scroll lag/lapse
+                scrollToBottom('auto');
+                // Use a short timeout to handle React DOM updates completely
+                const timer = setTimeout(() => {
+                    scrollToBottom('auto');
+                    isInitialLoadRef.current = false;
+                }, 50);
+                return () => clearTimeout(timer);
+            } else {
+                // New message received/sent: scroll smoothly for premium Messenger feel!
+                scrollToBottom('smooth');
+            }
+        }
     }, [messages]);
+
+    // Handle late image rendering scrolling adjustments
+    useEffect(() => {
+        const container = messagesContainerRef.current;
+        if (!container) return;
+
+        const handleImageLoad = (event: Event) => {
+            if ((event.target as HTMLElement).tagName === 'IMG') {
+                // When any image finishes loading, scroll to bottom to adjust for dynamic heights
+                scrollToBottom(isInitialLoadRef.current ? 'auto' : 'smooth');
+            }
+        };
+
+        // Capture phase to catch 'load' event of child elements
+        container.addEventListener('load', handleImageLoad, true);
+        return () => {
+            container.removeEventListener('load', handleImageLoad, true);
+        };
+    }, []);
 
     // WebSocket message handler
     useEffect(() => {
@@ -248,8 +330,8 @@ export default function ChatWindow({ conversation, currentUserId, onDeleteConver
         }
     };
 
-    const scrollToBottom = () => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    const scrollToBottom = (behavior: ScrollBehavior = 'smooth') => {
+        messagesEndRef.current?.scrollIntoView({ behavior });
     };
 
     const handleSendMessage = async (e: React.FormEvent) => {
@@ -456,7 +538,7 @@ export default function ChatWindow({ conversation, currentUserId, onDeleteConver
             </div>
 
             {/* Messages */}
-            <div className="chat-window__messages">
+            <div ref={messagesContainerRef} className="chat-window__messages">
                 {isLoading ? (
                     <div className="chat-window__loading">Loading messages...</div>
                 ) : messages.length === 0 ? (
@@ -464,13 +546,32 @@ export default function ChatWindow({ conversation, currentUserId, onDeleteConver
                         <p>No messages yet. Start the conversation! 👋</p>
                     </div>
                 ) : (
-                    messages.map(message => (
-                        <MessageBubble
-                            key={message.id}
-                            message={message}
-                            isOwnMessage={message.sender_id === currentUserId}
-                        />
-                    ))
+                    messages.map((message, index) => {
+                        const isLast = index === messages.length - 1;
+                        const isOwn = message.sender_id === currentUserId;
+                        return (
+                            <div key={message.id} className="chat-window__message-row">
+                                <MessageBubble
+                                    message={message}
+                                    isOwnMessage={isOwn}
+                                />
+                                {isLast && isOwn && isLastMessageSeen() && (
+                                    <div className="chat-window__seen-row">
+                                        <img
+                                            src={getOtherParticipantAvatar()}
+                                            alt="Seen"
+                                            className="chat-window__seen-avatar"
+                                            title={`Seen by ${getConversationName()}`}
+                                            onError={(e) => {
+                                                const name = getConversationName();
+                                                e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random`;
+                                            }}
+                                        />
+                                    </div>
+                                )}
+                            </div>
+                        );
+                    })
                 )}
 
                 {/* Typing indicator */}

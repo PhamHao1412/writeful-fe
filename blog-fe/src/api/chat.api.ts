@@ -6,6 +6,7 @@ export interface Participant {
     conversation_id: string;
     user_id: string;
     joined_at: string;
+    last_read_at?: string;
     user?: {
         id: string;
         username: string;
