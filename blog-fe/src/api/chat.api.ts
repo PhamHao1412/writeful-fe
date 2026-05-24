@@ -23,6 +23,8 @@ export interface Message {
     type: 'text' | 'image' | 'file' | 'call';
     content: string;
     media_url?: string;
+    reply_to_message_id?: string;
+    reply_to_message?: Message;
     created_at: string;
     updated_at: string;
     sender?: {
@@ -57,6 +59,7 @@ export interface SendMessageRequest {
     type: 'text' | 'image' | 'file' | 'call';
     content: string;
     media_url?: string;
+    reply_to_message_id?: string;
 }
 
 export interface GetMessagesParams {

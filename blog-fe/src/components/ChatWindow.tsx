@@ -30,6 +30,7 @@ export default function ChatWindow({ conversation, currentUserId, onDeleteConver
     const [hasMarkedAsRead, setHasMarkedAsRead] = useState(false);
     const [lastMarkedMessageId, setLastMarkedMessageId] = useState<string | null>(null);
     const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+    const [replyingToMessage, setReplyingToMessage] = useState<Message | null>(null);
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const messagesContainerRef = useRef<HTMLDivElement>(null);
     const isInitialLoadRef = useRef(true);
@@ -232,6 +233,7 @@ export default function ChatWindow({ conversation, currentUserId, onDeleteConver
         loadMessages();
         setHasMarkedAsRead(false); // Reset when conversation changes
         setLastMarkedMessageId(null); // Reset last marked message ID to allow marking new conversation read
+        setReplyingToMessage(null); // Reset replying message state
     }, [conversation.id]);
 
     // Scroll to bottom when messages change
@@ -361,7 +363,8 @@ export default function ChatWindow({ conversation, currentUserId, onDeleteConver
                 conversation_id: conversation.id,
                 type: imageUrl ? 'image' : 'text',
                 content: messageContent,
-                media_url: imageUrl || undefined
+                media_url: imageUrl || undefined,
+                reply_to_message_id: replyingToMessage?.id || undefined
             });
 
             // Clear selected image state only on success
@@ -369,6 +372,9 @@ export default function ChatWindow({ conversation, currentUserId, onDeleteConver
             if (fileInputRef.current) {
                 fileInputRef.current.value = '';
             }
+
+            // Clear replying message state on success
+            setReplyingToMessage(null);
 
             // Stop typing indicator
             chatWebSocket.sendTypingIndicator(conversation.id, currentUserId, false);
@@ -550,10 +556,11 @@ export default function ChatWindow({ conversation, currentUserId, onDeleteConver
                         const isLast = index === messages.length - 1;
                         const isOwn = message.sender_id === currentUserId;
                         return (
-                            <div key={message.id} className="chat-window__message-row">
+                            <div key={message.id} id={`msg-${message.id}`} className="chat-window__message-row">
                                 <MessageBubble
                                     message={message}
                                     isOwnMessage={isOwn}
+                                    onReply={setReplyingToMessage}
                                 />
                                 {isLast && isOwn && isLastMessageSeen() && (
                                     <div className="chat-window__seen-row">
@@ -618,6 +625,33 @@ export default function ChatWindow({ conversation, currentUserId, onDeleteConver
 
             {/* Input */}
             <form className="chat-window__input-form" onSubmit={handleSendMessage}>
+                {replyingToMessage && (
+                    <div className="chat-window__reply-preview-bar">
+                        <div className="chat-window__reply-preview-info">
+                            <span className="chat-window__reply-preview-title">
+                                Replying to {replyingToMessage.sender?.display_name || replyingToMessage.sender?.username || "User"}
+                            </span>
+                            <span className="chat-window__reply-preview-content">
+                                {replyingToMessage.type === 'text' 
+                                    ? replyingToMessage.content 
+                                    : replyingToMessage.type === 'image' 
+                                        ? '📷 Photo' 
+                                        : replyingToMessage.type === 'file' 
+                                            ? '📎 File' 
+                                            : '📞 Call'}
+                            </span>
+                        </div>
+                        <button 
+                            type="button" 
+                            className="chat-window__reply-preview-close" 
+                            onClick={() => setReplyingToMessage(null)}
+                            title="Cancel reply"
+                        >
+                            ✕
+                        </button>
+                    </div>
+                )}
+
                 <input
                     ref={fileInputRef}
                     type="file"
