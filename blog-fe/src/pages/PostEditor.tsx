@@ -26,6 +26,7 @@ export default function PostEditorPage() {
     const [subtitle, setSubtitle] = useState("");
     const [content, setContent] = useState("");
     const [coverImageUrl, setCoverImageUrl] = useState<string>("");
+    const [status, setStatus] = useState<"draft" | "published">("draft");
 
     const [mediaItems, setMediaItems] = useState<MediaItem[]>([]);
     const [uploading, setUploading] = useState(false);
@@ -71,6 +72,7 @@ export default function PostEditorPage() {
                 setTitle(p.title);
                 setSubtitle(p.subtitle || "");
                 setContent(p.content);
+                setStatus(p.status);
                 if (p.cover_image_url) {
                     setCoverImageUrl(p.cover_image_url);
                 }
@@ -232,11 +234,13 @@ export default function PostEditorPage() {
             if (!postId) {
                 const p = await createDraft(payload);
                 await publishPost(p.id);
-                nav("/posts");
+                nav(`/posts/${p.id}`);
             } else {
                 await updatePost(postId, payload);
-                await publishPost(postId);
-                nav("/posts");
+                if (status !== "published") {
+                    await publishPost(postId);
+                }
+                nav(`/posts/${postId}`);
             }
         } catch (e: any) {
             if (e?.response?.status === 401) return nav("/login");
@@ -400,11 +404,15 @@ export default function PostEditorPage() {
 
             <div className="post-editor__actions">
                 <div className="post-editor__actions-container">
-                    <button className="btn btn--secondary" onClick={onSave} disabled={saving}>
-                        {saving ? "Saving..." : "Save Draft"}
-                    </button>
+                    {status !== "published" && (
+                        <button className="btn btn--secondary" onClick={onSave} disabled={saving}>
+                            {saving ? "Saving..." : "Save Draft"}
+                        </button>
+                    )}
                     <button className="btn btn--primary" onClick={onPublish} disabled={publishing}>
-                        {publishing ? "Publishing..." : "Publish"}
+                        {publishing 
+                            ? (status === "published" ? "Updating..." : "Publishing...") 
+                            : (status === "published" ? "Update Story" : "Publish")}
                     </button>
                 </div>
             </div>
