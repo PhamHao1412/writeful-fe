@@ -28,7 +28,6 @@ export default function ChatWindow({ conversation, currentUserId, onDeleteConver
     const [isSending, setIsSending] = useState(false);
     const [typingUsers, setTypingUsers] = useState<Set<string>>(new Set<string>());
     const [hasMarkedAsRead, setHasMarkedAsRead] = useState(false);
-    const [lastMarkedMessageId, setLastMarkedMessageId] = useState<string | null>(null);
     const [showEmojiPicker, setShowEmojiPicker] = useState(false);
     const [replyingToMessage, setReplyingToMessage] = useState<Message | null>(null);
     const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -214,7 +213,6 @@ export default function ChatWindow({ conversation, currentUserId, onDeleteConver
         isInitialLoadRef.current = true; // Mark as initial load for this conversation
         loadMessages();
         setHasMarkedAsRead(false); // Reset when conversation changes
-        setLastMarkedMessageId(null); // Reset last marked message ID to allow marking new conversation read
         setReplyingToMessage(null); // Reset replying message state
 
         // Auto-focus the input field when switching conversations for premium UX
@@ -429,10 +427,6 @@ export default function ChatWindow({ conversation, currentUserId, onDeleteConver
     const handleInputClick = () => {
         // Mark as read when user clicks on input (shows intent to read and reply)
         // hasMarkedAsRead is reset to false when new messages arrive from others
-        if (messages.length > 0) {
-            const lastMsg = messages[messages.length - 1];
-            setLastMarkedMessageId(lastMsg.id);
-        }
         if (!hasMarkedAsRead) {
             setHasMarkedAsRead(true);
 
@@ -449,7 +443,6 @@ export default function ChatWindow({ conversation, currentUserId, onDeleteConver
                     console.error('Error marking conversation as read:', error);
                     // Revert flag on error
                     setHasMarkedAsRead(false);
-                    setLastMarkedMessageId(null);
                 });
         }
     };
