@@ -1,13 +1,15 @@
-import type { Message } from '../api/chat.api';
+import type { Message, Participant } from '../api/chat.api';
 import '../styles/MessageBubble.css';
 
 interface MessageBubbleProps {
     message: Message;
     isOwnMessage: boolean;
     onReply?: (message: Message) => void;
+    participants?: Participant[];
+    currentUserId?: string;
 }
 
-export default function MessageBubble({ message, isOwnMessage, onReply }: MessageBubbleProps) {
+export default function MessageBubble({ message, isOwnMessage, onReply, participants = [], currentUserId }: MessageBubbleProps) {
     const formatTime = (dateString: string) => {
         const date = new Date(dateString);
         const now = new Date();
@@ -38,18 +40,25 @@ export default function MessageBubble({ message, isOwnMessage, onReply }: Messag
         const parentSenderId = message.reply_to_message.sender_id;
         const msgSenderId = message.sender_id;
 
+        const getDisplayName = (userId: string) => {
+            const p = participants.find(part => part.user_id === userId);
+            return p?.user?.display_name || p?.user?.username || 'User';
+        };
+
         if (isOwnMessage) {
             if (parentSenderId === msgSenderId) {
                 return 'Bạn đã trả lời chính mình';
             } else {
-                return 'Bạn đã trả lời Bae 🤍';
+                return `Bạn đã trả lời ${getDisplayName(parentSenderId)}`;
             }
         } else {
-            const senderName = message.sender?.display_name || 'Bae';
+            const senderName = message.sender?.display_name || getDisplayName(msgSenderId);
             if (parentSenderId === msgSenderId) {
                 return `${senderName} đã trả lời chính họ`;
-            } else {
+            } else if (currentUserId && parentSenderId === currentUserId) {
                 return `${senderName} đã trả lời bạn`;
+            } else {
+                return `${senderName} đã trả lời ${getDisplayName(parentSenderId)}`;
             }
         }
     };

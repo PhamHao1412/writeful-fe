@@ -234,6 +234,11 @@ export default function ChatWindow({ conversation, currentUserId, onDeleteConver
         setHasMarkedAsRead(false); // Reset when conversation changes
         setLastMarkedMessageId(null); // Reset last marked message ID to allow marking new conversation read
         setReplyingToMessage(null); // Reset replying message state
+
+        // Auto-focus the input field when switching conversations for premium UX
+        requestAnimationFrame(() => {
+            inputRef.current?.focus();
+        });
     }, [conversation.id]);
 
     // Scroll to bottom when messages change
@@ -334,6 +339,24 @@ export default function ChatWindow({ conversation, currentUserId, onDeleteConver
 
     const scrollToBottom = (behavior: ScrollBehavior = 'smooth') => {
         messagesEndRef.current?.scrollIntoView({ behavior });
+    };
+
+    const handleReply = (message: Message) => {
+        setReplyingToMessage(message);
+        // Focus the input field immediately so the user can start typing
+        requestAnimationFrame(() => {
+            inputRef.current?.focus();
+        });
+    };
+
+    const getReplyingToDisplayName = () => {
+        if (!replyingToMessage) return '';
+        const senderId = replyingToMessage.sender_id;
+        if (senderId === currentUserId) {
+            return 'chính mình';
+        }
+        const p = conversation.participants.find(part => part.user_id === senderId);
+        return p?.user?.display_name || p?.user?.username || 'User';
     };
 
     const handleSendMessage = async (e: React.FormEvent) => {
@@ -560,7 +583,9 @@ export default function ChatWindow({ conversation, currentUserId, onDeleteConver
                                 <MessageBubble
                                     message={message}
                                     isOwnMessage={isOwn}
-                                    onReply={setReplyingToMessage}
+                                    onReply={handleReply}
+                                    participants={conversation.participants}
+                                    currentUserId={currentUserId}
                                 />
                                 {isLast && isOwn && isLastMessageSeen() && (
                                     <div className="chat-window__seen-row">
@@ -629,7 +654,7 @@ export default function ChatWindow({ conversation, currentUserId, onDeleteConver
                     <div className="chat-window__reply-preview-bar">
                         <div className="chat-window__reply-preview-info">
                             <span className="chat-window__reply-preview-title">
-                                Replying to {replyingToMessage.sender?.display_name || replyingToMessage.sender?.username || "User"}
+                                Đang trả lời {getReplyingToDisplayName()}
                             </span>
                             <span className="chat-window__reply-preview-content">
                                 {replyingToMessage.type === 'text' 
