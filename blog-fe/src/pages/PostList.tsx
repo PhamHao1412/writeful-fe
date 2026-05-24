@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { listPosts, type PostListItem } from "../api/post.api";
 import { getErrorMessage } from "../api/http";
+import { StoriesBar } from "../components/StoriesBar";
 import "../styles/PostList.css";
 
 type FilterType = "all" | "published" | "drafts";
@@ -60,6 +61,8 @@ export default function PostListPage() {
                         </button>
                     </div>
                 </header>
+
+                <StoriesBar />
 
                 <div className="create-post-prompt" onClick={() => nav('/posts/new')}>
                     <div className="create-post-prompt__avatar">
