@@ -114,7 +114,7 @@ export async function publishPost(id: string) {
 }
 
 export async function unpublishPost(id: string) {
-    const res = await contentHttp.put(`/posts/${id}/unpublish`, {});
+    const res = await contentHttp.put(`content/api/v1/post/${id}/unpublish`, {});
     return res.data;
 }
 

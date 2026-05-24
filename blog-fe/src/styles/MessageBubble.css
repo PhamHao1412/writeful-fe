@@ -202,3 +202,52 @@
 .message-bubble__call--connected .message-bubble__call-text {
     color: #34d399;
 }
+
+/* Custom image bubble styling (no harsh gradients, clean layout) */
+.message-bubble__content--image {
+    padding: 6px !important;
+    background: #f0f2f5 !important;
+    color: #1c1e21 !important;
+    border-radius: 16px !important;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08) !important;
+    overflow: hidden;
+    max-width: 100%;
+}
+
+.message-bubble--own .message-bubble__content--image {
+    background: #ffffff !important;
+    border: 1px solid #e4e6eb !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06) !important;
+}
+
+.message-bubble__content--image .message-bubble__media {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+}
+
+.message-bubble__content--image .message-bubble__image {
+    display: block;
+    width: 100%;
+    max-width: 280px;
+    height: auto;
+    max-height: 360px;
+    border-radius: 12px;
+    object-fit: cover;
+    margin: 0 auto;
+}
+
+.message-bubble__content--image .message-bubble__text {
+    padding: 8px 8px 4px 8px;
+    color: #1c1e21;
+    font-size: 14px;
+    word-break: break-word;
+}
+
+.message-bubble__content--image .message-bubble__time {
+    padding: 0 8px 4px 8px;
+    color: #8e9094;
+    text-align: right;
+    font-size: 10px;
+    margin-top: 4px;
+}

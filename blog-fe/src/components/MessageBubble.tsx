@@ -52,7 +52,11 @@ export default function MessageBubble({ message, isOwnMessage }: MessageBubblePr
                     <div className="message-bubble__name">{message.sender.display_name}</div>
                 )}
 
-                <div className={`message-bubble__content ${message.type === 'call' ? 'message-bubble__content--call' : ''}`}>
+                <div className={`message-bubble__content ${
+                    message.type === 'call' ? 'message-bubble__content--call' : ''
+                } ${
+                    message.type === 'image' ? 'message-bubble__content--image' : ''
+                }`}>
                     {message.type === 'text' && (
                         <p className="message-bubble__text">{message.content}</p>
                     )}

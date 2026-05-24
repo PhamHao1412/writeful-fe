@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import EmojiPicker, { type EmojiClickData } from 'emoji-picker-react';
 import type { Conversation, Message } from '../api/chat.api';
 import { getMessages, sendMessage, markConversationAsRead } from '../api/chat.api';
+import { uploadImages } from '../api/media.api';
 import { chatWebSocket } from '../services/chatWebSocket';
 import MessageBubble from './MessageBubble';
 import { useCall } from '../contexts/CallContext';
@@ -29,6 +30,33 @@ export default function ChatWindow({ conversation, currentUserId, onDeleteConver
     const typingTimeoutRef = useRef<number | null>(null);
     const inputRef = useRef<HTMLInputElement>(null);
     const emojiPickerRef = useRef<HTMLDivElement>(null);
+
+    // Image upload states & reference
+    const [selectedImage, setSelectedImage] = useState<File | null>(null);
+    const [isUploading, setIsUploading] = useState(false);
+    const fileInputRef = useRef<HTMLInputElement>(null);
+
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            if (!file.type.startsWith('image/')) {
+                alert('Please select an image file');
+                return;
+            }
+            setSelectedImage(file);
+        }
+    };
+
+    const triggerFileInput = () => {
+        fileInputRef.current?.click();
+    };
+
+    const handleRemoveImage = () => {
+        setSelectedImage(null);
+        if (fileInputRef.current) {
+            fileInputRef.current.value = '';
+        }
+    };
 
     // Helper function to sort messages by created_at timestamp
     const sortMessagesByTime = (msgs: Message[]) => {
@@ -173,31 +201,48 @@ export default function ChatWindow({ conversation, currentUserId, onDeleteConver
     const handleSendMessage = async (e: React.FormEvent) => {
         e.preventDefault();
 
-        if (!inputValue.trim() || isSending) return;
+        if ((!inputValue.trim() && !selectedImage) || isSending) return;
 
         setIsSending(true);
         const messageContent = inputValue.trim();
         setInputValue(''); // Clear input immediately for better UX
 
+        let imageUrl = '';
+        const currentSelectedImage = selectedImage;
+        if (currentSelectedImage) {
+            setIsUploading(true);
+        }
+        setSelectedImage(null); // Clear selected image state immediately
+        if (fileInputRef.current) {
+            fileInputRef.current.value = '';
+        }
+
         try {
+            if (currentSelectedImage) {
+                const uploadedImages = await uploadImages([currentSelectedImage]);
+                if (uploadedImages && uploadedImages.length > 0) {
+                    imageUrl = uploadedImages[0].url;
+                }
+            }
+
             await sendMessage({
                 conversation_id: conversation.id,
-                type: 'text',
-                content: messageContent
+                type: imageUrl ? 'image' : 'text',
+                content: messageContent,
+                media_url: imageUrl || undefined
             });
-
-            // Don't add message to state here - let WebSocket handle it
-            // This prevents duplicate messages
 
             // Stop typing indicator
             chatWebSocket.sendTypingIndicator(conversation.id, currentUserId, false);
         } catch (error) {
             console.error('Error sending message:', error);
             alert('Failed to send message');
-            // Restore input value on error
-            setInputValue(messageContent);
+            // Restore state on error
+            if (messageContent) setInputValue(messageContent);
+            if (currentSelectedImage) setSelectedImage(currentSelectedImage);
         } finally {
             setIsSending(false);
+            setIsUploading(false);
             // Auto-focus input after sending - use requestAnimationFrame for better reliability
             requestAnimationFrame(() => {
                 inputRef.current?.focus();
@@ -381,29 +426,59 @@ export default function ChatWindow({ conversation, currentUserId, onDeleteConver
                 <div ref={messagesEndRef} />
             </div>
 
+            {/* Image Preview Bar */}
+            {selectedImage && (
+                <div className="chat-window__preview-bar">
+                    <div className="chat-window__preview-container">
+                        <img 
+                            src={URL.createObjectURL(selectedImage)} 
+                            alt="Selected upload preview" 
+                            className="chat-window__preview-img" 
+                        />
+                        <button 
+                            type="button" 
+                            className="chat-window__preview-remove" 
+                            onClick={handleRemoveImage}
+                            disabled={isSending || isUploading}
+                            title="Remove image"
+                            id="btn-remove-preview"
+                        >
+                            ✕
+                        </button>
+                    </div>
+                    {isUploading && (
+                        <div className="chat-window__preview-loader">
+                            <span className="chat-window__preview-spinner"></span>
+                            Uploading...
+                        </div>
+                    )}
+                </div>
+            )}
+
             {/* Input */}
             <form className="chat-window__input-form" onSubmit={handleSendMessage}>
-                <div className="chat-window__input-wrapper">
-                    <input
-                        ref={inputRef}
-                        type="text"
-                        value={inputValue}
-                        onChange={handleInputChange}
-                        onClick={handleInputClick}
-                        placeholder="Type a message..."
-                        className="chat-window__input"
-                        disabled={isSending}
-                    />
+                <input
+                    ref={fileInputRef}
+                    type="file"
+                    onChange={handleFileChange}
+                    accept="image/*"
+                    style={{ display: 'none' }}
+                    id="chat-image-input"
+                />
+                
+                <div className="chat-window__input-capsule">
+                    {/* Left: Emoji Button */}
                     <button
                         type="button"
-                        className="chat-window__emoji-btn"
+                        className="chat-window__emoji-btn-left"
                         onClick={() => setShowEmojiPicker(!showEmojiPicker)}
                         title="Add emoji"
+                        disabled={isSending || isUploading}
                     >
                         😊
                     </button>
 
-                    {/* Emoji Picker */}
+                    {/* Emoji Picker container */}
                     {showEmojiPicker && (
                         <div className="chat-window__emoji-picker" ref={emojiPickerRef}>
                             <EmojiPicker
@@ -415,14 +490,72 @@ export default function ChatWindow({ conversation, currentUserId, onDeleteConver
                             />
                         </div>
                     )}
+
+                    {/* Middle: Text Input */}
+                    <input
+                        ref={inputRef}
+                        type="text"
+                        value={inputValue}
+                        onChange={handleInputChange}
+                        onClick={handleInputClick}
+                        placeholder="Message..."
+                        className="chat-window__text-input"
+                        disabled={isSending || isUploading}
+                    />
+
+                    {/* Right: Actions or Send button */}
+                    <div className="chat-window__right-actions">
+                        {(!inputValue.trim() && !selectedImage) ? (
+                            <>
+                                {/* Microphone placeholder */}
+                                <button
+                                    type="button"
+                                    className="chat-window__inline-btn"
+                                    title="Voice message (Placeholder)"
+                                    onClick={() => alert("Voice message feature is coming soon!")}
+                                >
+                                    🎤
+                                </button>
+                                {/* Image Attachment Button */}
+                                <button
+                                    type="button"
+                                    className="chat-window__inline-btn"
+                                    onClick={triggerFileInput}
+                                    disabled={isSending || isUploading}
+                                    title="Attach image"
+                                    id="btn-attach-image"
+                                >
+                                    🖼️
+                                </button>
+                                {/* Sticker placeholder */}
+                                <button
+                                    type="button"
+                                    className="chat-window__inline-btn"
+                                    title="Stickers (Placeholder)"
+                                    onClick={() => alert("Stickers feature is coming soon!")}
+                                >
+                                    ✨
+                                </button>
+                            </>
+                        ) : (
+                            <button
+                                type="submit"
+                                className="chat-window__inline-send-btn"
+                                disabled={isSending || isUploading}
+                                title="Send message"
+                            >
+                                {isSending || isUploading ? (
+                                    <span className="chat-window__send-spinner"></span>
+                                ) : (
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="chat-window__send-svg">
+                                        <line x1="22" y1="2" x2="11" y2="13" />
+                                        <polygon points="22 2 15 22 11 13 2 9 22 2" />
+                                    </svg>
+                                )}
+                            </button>
+                        )}
+                    </div>
                 </div>
-                <button
-                    type="submit"
-                    className="chat-window__send-btn"
-                    disabled={!inputValue.trim() || isSending}
-                >
-                    {isSending ? '⏳' : '📤'}
-                </button>
             </form>
         </div>
     );
