@@ -19,7 +19,7 @@ export default function StoriesPage() {
   const [isCreatorOpen, setIsCreatorOpen] = useState(false);
 
   const currentGroup = groups[currentGroupIdx];
-  const currentSlide = currentGroup?.stories[currentSlideIdx];
+  const currentSlide = currentGroup?.stories?.[currentSlideIdx];
 
   // Audio Playback settings
   const [isMuted, setIsMuted] = useState(false);
@@ -199,7 +199,7 @@ export default function StoriesPage() {
       const prevGroup = groups[currentGroupIdx - 1];
       const prevIdx = currentGroupIdx - 1;
       setCurrentGroupIdx(prevIdx);
-      setCurrentSlideIdx(prevGroup.stories.length - 1);
+      setCurrentSlideIdx((prevGroup?.stories?.length || 0) - 1);
       setSearchParams({ userId: prevGroup.user_id });
     } else {
       // Loop back to beginning of current slide
@@ -217,7 +217,7 @@ export default function StoriesPage() {
   };
 
   const handleNextSlide = () => {
-    if (currentSlideIdx < currentGroup.stories.length - 1) {
+    if (currentSlideIdx < (currentGroup?.stories?.length || 0) - 1) {
       setCurrentSlideIdx(prev => prev + 1);
     } else {
       // Reached the absolute end of this user's story group, automatically return to previous page
@@ -374,7 +374,7 @@ export default function StoriesPage() {
           ) : (
             groups.map((group, idx) => {
               const isActiveUser = currentGroupIdx === idx;
-              const groupLatestSlide = group.stories[group.stories.length - 1];
+              const groupLatestSlide = group.stories?.[group.stories.length - 1];
               
               return (
                 <div
@@ -428,7 +428,7 @@ export default function StoriesPage() {
               </button>
             )}
 
-            {currentSlideIdx < currentGroup.stories.length - 1 && (
+            {currentSlideIdx < (currentGroup?.stories?.length || 0) - 1 && (
               <button
                 type="button"
                 className="story-viewer__nav-btn story-viewer__nav-btn--next"
@@ -442,7 +442,7 @@ export default function StoriesPage() {
             <div className="story-viewer__card-wrapper">
               {/* Custom Progress Indicators */}
               <div className="story-viewer__progress-container">
-                {currentGroup?.stories.map((st, idx) => {
+                {currentGroup?.stories?.map((st, idx) => {
                   let widthPercent = 0;
                   if (idx < currentSlideIdx) widthPercent = 100;
                   if (idx === currentSlideIdx) widthPercent = progress;
