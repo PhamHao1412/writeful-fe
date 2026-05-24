@@ -345,7 +345,7 @@ export default function StoriesPage() {
   }
 
   // Find if current user has any active story
-  const myGroup = groups.find(g => g.user_id === profile?.id);
+  const myGroup = profile?.id ? groups.find(g => g.user_id === profile.id) : undefined;
 
   return (
     <div className="story-viewer-overlay" style={{ position: "relative", height: "100vh", zIndex: 1 }}>
@@ -393,10 +393,10 @@ export default function StoriesPage() {
 
           {myGroup ? (
             <div
-              className={`story-viewer__sidebar-item ${currentGroupIdx !== null && groups[currentGroupIdx]?.user_id === profile?.id ? "story-viewer__sidebar-item--active" : ""}`}
+              className={`story-viewer__sidebar-item ${currentGroupIdx !== null && profile?.id && groups[currentGroupIdx]?.user_id === profile.id ? "story-viewer__sidebar-item--active" : ""}`}
               onClick={() => {
-                const idx = groups.findIndex(g => g.user_id === profile?.id);
-                if (idx !== -1) handleSelectUserFromSidebar(idx, profile?.id || "");
+                const idx = profile?.id ? groups.findIndex(g => g.user_id === profile.id) : -1;
+                if (idx !== -1 && profile?.id) handleSelectUserFromSidebar(idx, profile.id);
               }}
             >
               <div className="story-viewer__sidebar-avatar-ring story-viewer__sidebar-avatar-ring--read">
@@ -547,7 +547,7 @@ export default function StoriesPage() {
                 </div>
                 
                 <div className="story-viewer__controls">
-                  {currentSlide?.user_id === profile?.id && (
+                  {profile?.id && currentSlide?.user_id && currentSlide.user_id === profile.id && (
                     <button
                       className="story-viewer__btn"
                       onClick={handleDeleteStory}
