@@ -733,7 +733,6 @@ export default function ChatWindow({ conversation, currentUserId, onDeleteConver
                         value={inputValue}
                         onChange={handleInputChange}
                         onClick={handleInputClick}
-                        onFocus={handleInputClick}
                         placeholder="Message..."
                         className="chat-window__text-input"
                         disabled={isSending || isUploading}
