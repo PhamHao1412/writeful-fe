@@ -3,6 +3,8 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import { getPost, deletePost, type PostDetail as PostDetailType } from "../api/post.api";
 import { getProfile, type UserProfile } from "../api/auth.api";
 import { getErrorMessage } from "../api/http";
+import { showToast } from "../components/Toast";
+import { showConfirm } from "../components/ConfirmModal";
 import MDEditor from "@uiw/react-md-editor";
 import "../styles/PostDetail.css";
 
@@ -16,7 +18,13 @@ export default function PostDetailPage() {
     const [deleting, setDeleting] = useState(false);
 
     const handleDelete = async () => {
-        if (!window.confirm("Are you sure you want to delete this story? This action cannot be undone.")) {
+        const confirmed = await showConfirm(
+            "Are you sure you want to delete this story? This action cannot be undone.",
+            "Delete Story",
+            "Delete",
+            "Cancel"
+        );
+        if (!confirmed) {
             return;
         }
 
@@ -24,9 +32,10 @@ export default function PostDetailPage() {
         try {
             if (!id) return;
             await deletePost(id);
+            showToast("Story deleted successfully!", "success");
             nav("/posts");
         } catch (e: any) {
-            alert("Failed to delete story: " + getErrorMessage(e));
+            showToast("Failed to delete story: " + getErrorMessage(e), "error");
         } finally {
             setDeleting(false);
         }

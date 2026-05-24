@@ -3,6 +3,7 @@ import { chatWebSocket } from '../services/chatWebSocket';
 import { useAuth } from './AuthContext';
 import { sendMessage } from '../api/chat.api';
 import { getProfile, type UserProfile } from '../api/auth.api';
+import { showToast } from '../components/Toast';
 
 export type CallState = 'idle' | 'calling' | 'ringing' | 'connected';
 export type CallType = 'audio' | 'video';
@@ -307,7 +308,7 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
                 case 'call_reject': {
                     if (callState === 'calling' || callState === 'ringing') {
-                        alert(payload.reason === 'busy' ? 'User is busy.' : 'Call declined.');
+                        showToast(payload.reason === 'busy' ? 'User is busy.' : 'Call declined.', 'warning');
                         cleanupCall();
                     }
                     break;
@@ -482,7 +483,7 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Trigger Outgoing Call
     const startCall = async (targetUserId: string, type: CallType, peer: PeerUser, conversationId: string) => {
         if (!chatWebSocket.isConnected()) {
-            alert('Cannot make call. Chat socket is disconnected.');
+            showToast('Cannot make call. Chat socket is disconnected.', 'error');
             return;
         }
 

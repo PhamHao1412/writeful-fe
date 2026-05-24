@@ -7,6 +7,8 @@ import ConversationList from '../components/ConversationList';
 import ChatWindow from '../components/ChatWindow';
 import FollowingList from '../components/FollowingList';
 import { getProfile } from '../api/auth.api';
+import { showToast } from '../components/Toast';
+import { showConfirm } from '../components/ConfirmModal';
 import '../styles/Chat.css';
 
 export default function Chat() {
@@ -155,7 +157,7 @@ export default function Chat() {
             setNewChatUserId('');
         } catch (error) {
             console.error('Error creating conversation:', error);
-            alert('Failed to create conversation. Please check the user ID and try again.');
+            showToast('Failed to create conversation. Please check the user ID and try again.', 'error');
         } finally {
             setIsCreatingChat(false);
         }
@@ -185,12 +187,18 @@ export default function Chat() {
             }
         } catch (error) {
             console.error('Error selecting user:', error);
-            alert('Failed to start conversation');
+            showToast('Failed to start conversation', 'error');
         }
     };
 
     const handleDeleteConversation = async (conversationId: string) => {
-        if (!confirm('Are you sure you want to delete this conversation?')) {
+        const confirmed = await showConfirm(
+            'Are you sure you want to delete this conversation?',
+            'Delete Conversation',
+            'Delete',
+            'Cancel'
+        );
+        if (!confirmed) {
             return;
         }
 
@@ -217,9 +225,10 @@ export default function Chat() {
                 // Clear URL param
                 setSearchParams({});
             }
+            showToast('Conversation deleted successfully', 'success');
         } catch (error) {
             console.error('Error deleting conversation:', error);
-            alert('Failed to delete conversation. Please try again.');
+            showToast('Failed to delete conversation. Please try again.', 'error');
         }
     };
 

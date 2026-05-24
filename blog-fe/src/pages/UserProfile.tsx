@@ -12,6 +12,7 @@ import {
 } from "../api/auth.api";
 import { listPosts, type PostListItem } from "../api/post.api";
 import { getErrorMessage } from "../api/http";
+import { showToast } from "../components/Toast";
 import "../styles/UserProfile.css";
 
 export default function UserProfilePage() {
@@ -135,7 +136,7 @@ export default function UserProfilePage() {
             }
         } catch (e: any) {
             console.error("Error toggling follow:", e);
-            alert(getErrorMessage(e));
+            showToast(getErrorMessage(e), "error");
         } finally {
             setFollowLoading(false);
         }

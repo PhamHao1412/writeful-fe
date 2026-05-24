@@ -6,6 +6,7 @@ import { AuthProvider } from './contexts/AuthContext'
 import { CallProvider } from './contexts/CallContext'
 import { CallOverlay } from './components/CallOverlay'
 import { ToastContainer } from './components/Toast'
+import { ConfirmModal } from './components/ConfirmModal'
 import App from './App'
 import './styles/variables.css'
 import './styles/Button.css'
@@ -18,6 +19,7 @@ createRoot(document.getElementById('root')!).render(
                     <App />
                     <CallOverlay />
                     <ToastContainer />
+                    <ConfirmModal />
                 </CallProvider>
             </AuthProvider>
         </BrowserRouter>

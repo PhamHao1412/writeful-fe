@@ -7,6 +7,7 @@ import { uploadImages } from '../api/media.api';
 import { chatWebSocket } from '../services/chatWebSocket';
 import MessageBubble from './MessageBubble';
 import { useCall } from '../contexts/CallContext';
+import { showToast } from './Toast';
 import '../styles/ChatWindow.css';
 
 interface ChatWindowProps {
@@ -40,7 +41,7 @@ export default function ChatWindow({ conversation, currentUserId, onDeleteConver
         const file = e.target.files?.[0];
         if (file) {
             if (!file.type.startsWith('image/')) {
-                alert('Please select an image file');
+                showToast('Please select an image file', 'warning');
                 return;
             }
             setSelectedImage(file);
@@ -238,7 +239,7 @@ export default function ChatWindow({ conversation, currentUserId, onDeleteConver
             chatWebSocket.sendTypingIndicator(conversation.id, currentUserId, false);
         } catch (error) {
             console.error('Error sending message:', error);
-            alert('Failed to send message');
+            showToast('Failed to send message', 'error');
             // Restore state on error
             if (messageContent) setInputValue(messageContent);
         } finally {
@@ -513,7 +514,7 @@ export default function ChatWindow({ conversation, currentUserId, onDeleteConver
                                     type="button"
                                     className="chat-window__inline-btn"
                                     title="Voice message (Placeholder)"
-                                    onClick={() => alert("Voice message feature is coming soon!")}
+                                    onClick={() => showToast("Voice message feature is coming soon!", "info")}
                                 >
                                     🎤
                                 </button>
@@ -533,7 +534,7 @@ export default function ChatWindow({ conversation, currentUserId, onDeleteConver
                                     type="button"
                                     className="chat-window__inline-btn"
                                     title="Stickers (Placeholder)"
-                                    onClick={() => alert("Stickers feature is coming soon!")}
+                                    onClick={() => showToast("Stickers feature is coming soon!", "info")}
                                 >
                                     ✨
                                 </button>
