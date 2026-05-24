@@ -188,14 +188,20 @@ export default function Chat() {
             });
             setActiveStatuses(prev => ({ ...initialStatuses, ...prev }));
 
-            // Restore selected conversation from URL if exists
-            const conversationIdFromUrl = searchParams.get('conversation');
-            if (conversationIdFromUrl && data.length > 0) {
-                const conversation = data.find(c => c.id === conversationIdFromUrl);
-                if (conversation) {
-                    setSelectedConversation(conversation);
+            // Restore selected conversation from URL on initial load, or sync with fresh data
+            setSelectedConversation(prev => {
+                if (!prev) {
+                    const conversationIdFromUrl = searchParams.get('conversation');
+                    if (conversationIdFromUrl && data.length > 0) {
+                        const conversation = data.find(c => c.id === conversationIdFromUrl);
+                        return conversation || null;
+                    }
+                    return null;
                 }
-            }
+                // Sync currently selected conversation with the freshly loaded data
+                const updated = data.find(c => c.id === prev.id);
+                return updated || prev;
+            });
         } catch (error) {
             console.error('Error loading conversations:', error);
         }
