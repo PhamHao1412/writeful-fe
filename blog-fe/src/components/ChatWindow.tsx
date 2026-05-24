@@ -43,8 +43,8 @@ export default function ChatWindow({ conversation, currentUserId, onDeleteConver
         if (messages.length === 0) return;
         const lastMsg = messages[messages.length - 1];
         if (lastMsg.sender_id !== currentUserId && lastMsg.id !== lastMarkedMessageId) {
-            // Only automatically mark as read if the browser/tab is actively focused
-            if (document.hasFocus()) {
+            // Only automatically mark as read if the browser/tab is actively focused AND the user is actively focused on the input (shows intent to interact)
+            if (document.hasFocus() && document.activeElement === inputRef.current) {
                 setLastMarkedMessageId(lastMsg.id);
                 markConversationAsRead(conversation.id)
                     .then(() => {
@@ -67,24 +67,27 @@ export default function ChatWindow({ conversation, currentUserId, onDeleteConver
             if (messages.length === 0) return;
             const lastMsg = messages[messages.length - 1];
             if (lastMsg.sender_id !== currentUserId && lastMsg.id !== lastMarkedMessageId) {
-                setLastMarkedMessageId(lastMsg.id);
-                markConversationAsRead(conversation.id)
-                    .then(() => {
-                        window.dispatchEvent(new CustomEvent('conversation-read', {
-                            detail: { conversationId: conversation.id }
-                        }));
-                    })
-                    .catch((error) => {
-                        console.error('Error marking conversation as read on window focus:', error);
-                        setLastMarkedMessageId(null);
-                    });
+                // If they return to the tab and the input is focused, mark as read
+                if (document.activeElement === inputRef.current) {
+                    setLastMarkedMessageId(lastMsg.id);
+                    markConversationAsRead(conversation.id)
+                        .then(() => {
+                            window.dispatchEvent(new CustomEvent('conversation-read', {
+                                detail: { conversationId: conversation.id }
+                            }));
+                        })
+                        .catch((error) => {
+                            console.error('Error marking conversation as read on window focus:', error);
+                            setLastMarkedMessageId(null);
+                        });
+                }
             }
         };
 
         window.addEventListener('focus', handleWindowFocus);
         
         // Check immediately in case the component has focused on mount
-        if (document.hasFocus()) {
+        if (document.hasFocus() && document.activeElement === inputRef.current) {
             handleWindowFocus();
         }
 
@@ -635,7 +638,11 @@ export default function ChatWindow({ conversation, currentUserId, onDeleteConver
             </div>
 
             {/* Messages */}
-            <div ref={messagesContainerRef} className="chat-window__messages">
+            <div 
+                ref={messagesContainerRef} 
+                className="chat-window__messages"
+                onClick={handleInputClick} // Clicking anywhere in the message history container also marks as read
+            >
                 {isLoading ? (
                     <div className="chat-window__loading">Loading messages...</div>
                 ) : messages.length === 0 ? (
