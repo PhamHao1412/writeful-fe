@@ -1,5 +1,6 @@
 import type { Conversation } from '../api/chat.api';
 import type { ActiveStatus } from '../pages/Chat';
+import { UserAvatar } from './UserAvatar';
 import '../styles/ConversationList.css';
 
 interface ConversationListProps {
@@ -30,15 +31,6 @@ export default function ConversationList({
         return otherParticipant?.user?.display_name || 'Unknown User';
     };
 
-    const getConversationAvatar = (conversation: Conversation) => {
-        if (conversation.type === 'group') {
-            return '👥';
-        }
-
-        const otherParticipant = conversation.participants.find(p => p.user_id !== currentUserId);
-        const name = otherParticipant?.user?.display_name || otherParticipant?.user?.username || 'Unknown User';
-        return otherParticipant?.user?.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random`;
-    };
 
     const formatLastMessageTime = (dateString?: string) => {
         if (!dateString) return '';
@@ -107,20 +99,21 @@ export default function ConversationList({
                             onClick={() => onSelectConversation(conversation)}
                         >
                             <div className="conversation-item__avatar-wrapper">
-                                {typeof getConversationAvatar(conversation) === 'string' && getConversationAvatar(conversation).startsWith('http') ? (
-                                    <img
-                                        src={getConversationAvatar(conversation)}
-                                        alt={getConversationName(conversation)}
-                                        className="conversation-item__avatar"
-                                        onError={(e) => {
-                                            const otherParticipant = conversation.participants.find(p => p.user_id !== currentUserId);
-                                            const name = otherParticipant?.user?.display_name || otherParticipant?.user?.username || 'Unknown User';
-                                            e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random`;
-                                        }}
-                                    />
-                                ) : (
+                                {conversation.type === 'direct' ? (() => {
+                                    const otherParticipant = conversation.participants.find(p => p.user_id !== currentUserId);
+                                    return (
+                                        <UserAvatar
+                                            userId={otherParticipant?.user_id}
+                                            avatarUrl={otherParticipant?.user?.avatar_url}
+                                            displayName={otherParticipant?.user?.display_name}
+                                            username={otherParticipant?.user?.username}
+                                            size={48}
+                                            className="conversation-item__avatar"
+                                        />
+                                    );
+                                })() : (
                                     <div className="conversation-item__avatar-emoji">
-                                        {getConversationAvatar(conversation)}
+                                        👥
                                     </div>
                                 )}
                                 {conversation.type === 'direct' && (() => {

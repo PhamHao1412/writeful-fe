@@ -1,11 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
 import EmojiPicker, { type EmojiClickData } from 'emoji-picker-react';
 import type { Conversation, Message } from '../api/chat.api';
 import { getMessages, sendMessage, markConversationAsRead } from '../api/chat.api';
 import { uploadImages } from '../api/media.api';
 import { chatWebSocket } from '../services/chatWebSocket';
 import MessageBubble from './MessageBubble';
+import { UserAvatar } from './UserAvatar';
 import { useCall } from '../contexts/CallContext';
 import { showToast } from './Toast';
 import type { ActiveStatus } from '../pages/Chat';
@@ -20,7 +20,6 @@ interface ChatWindowProps {
 }
 
 export default function ChatWindow({ conversation, currentUserId, onDeleteConversation, onBack, activeStatuses = {} }: ChatWindowProps) {
-    const navigate = useNavigate();
     const { startCall } = useCall();
     const [messages, setMessages] = useState<Message[]>([]);
     const [inputValue, setInputValue] = useState('');
@@ -159,34 +158,7 @@ export default function ChatWindow({ conversation, currentUserId, onDeleteConver
         return otherParticipant?.user?.display_name || 'Unknown User';
     };
 
-    // Get conversation avatar
-    const getConversationAvatar = () => {
-        if (conversation.type === 'group') {
-            return '👥'; // Group icon
-        }
 
-        const otherParticipant = conversation.participants.find(p => p.user_id !== currentUserId);
-        const name = otherParticipant?.user?.display_name || otherParticipant?.user?.username || 'Unknown User';
-        return otherParticipant?.user?.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random`;
-    };
-
-    // Get other participant's username for navigation
-    const getOtherParticipantUsername = () => {
-        if (conversation.type === 'group') {
-            return null; // Don't navigate for group chats
-        }
-
-        const otherParticipant = conversation.participants.find(p => p.user_id !== currentUserId);
-        return otherParticipant?.user?.username;
-    };
-
-    // Handle avatar click to navigate to user profile
-    const handleAvatarClick = () => {
-        const username = getOtherParticipantUsername();
-        if (username) {
-            navigate(`/users/${username}`);
-        }
-    };
 
     const handleStartCall = (type: 'audio' | 'video') => {
         const otherParticipant = conversation.participants.find(p => p.user_id !== currentUserId);
@@ -507,27 +479,21 @@ export default function ChatWindow({ conversation, currentUserId, onDeleteConver
                 )}
                 <div className="chat-window__header-info">
                     <div className="chat-window__avatar-wrapper">
-                        {typeof getConversationAvatar() === 'string' && getConversationAvatar().startsWith('http') ? (
-                            <img
-                                src={getConversationAvatar()}
-                                alt={getConversationName()}
-                                className="chat-window__avatar"
-                                onClick={handleAvatarClick}
-                                style={{ cursor: conversation.type === 'direct' ? 'pointer' : 'default' }}
-                                title={conversation.type === 'direct' ? 'View profile' : ''}
-                                onError={(e) => {
-                                    const name = getConversationName();
-                                    e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random`;
-                                }}
-                            />
-                        ) : (
-                            <div
-                                className="chat-window__avatar-emoji"
-                                onClick={handleAvatarClick}
-                                style={{ cursor: conversation.type === 'direct' ? 'pointer' : 'default' }}
-                                title={conversation.type === 'direct' ? 'View profile' : ''}
-                            >
-                                {getConversationAvatar()}
+                        {conversation.type === 'direct' ? (() => {
+                            const otherParticipant = conversation.participants.find(p => p.user_id !== currentUserId);
+                            return (
+                                <UserAvatar
+                                    userId={otherParticipant?.user_id}
+                                    avatarUrl={otherParticipant?.user?.avatar_url}
+                                    displayName={otherParticipant?.user?.display_name}
+                                    username={otherParticipant?.user?.username}
+                                    size={40}
+                                    className="chat-window__avatar"
+                                />
+                            );
+                        })() : (
+                            <div className="chat-window__avatar-emoji">
+                                👥
                             </div>
                         )}
                         {conversation.type === 'direct' && (() => {

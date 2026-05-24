@@ -13,14 +13,22 @@
   transform: scale(1.06);
 }
 
-/* Gradient colorful ring for unread stories */
+/* Gradient colorful ring for unread stories - Thicker & Glowing shadow */
 .user-avatar-wrapper--unread {
   background: linear-gradient(45deg, #fdf497 0%, #f58529 25%, #dd2a7b 50%, #8134af 75%, #515bd4 100%);
+  box-shadow: 0 0 12px rgba(221, 42, 123, 0.55), 0 0 5px rgba(81, 91, 212, 0.45);
 }
 
-/* Simple dark/gray ring for read stories */
+/* Thicker gray ring for read stories */
 .user-avatar-wrapper--read {
-  background: rgba(130, 130, 130, 0.4);
+  background: rgba(160, 160, 160, 0.6);
+  box-shadow: 0 0 6px rgba(0, 0, 0, 0.3);
+}
+
+/* On dark theme background */
+body.dark-theme .user-avatar-wrapper--read {
+  background: rgba(255, 255, 255, 0.25);
+  box-shadow: 0 0 6px rgba(0, 0, 0, 0.4);
 }
 
 .user-avatar-img {
@@ -43,4 +51,77 @@
 .user-avatar-img--clickable:hover {
   opacity: 0.9;
   transform: scale(1.02);
+}
+
+/* Premium UserAvatar Floating Context Menu Dropdown */
+.user-avatar-menu {
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%) translateY(8px);
+  background: rgba(24, 25, 26, 0.96);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 12px;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.65), 0 4px 12px rgba(0, 0, 0, 0.45);
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 148px;
+  z-index: 99999; /* Exceeds chat, sidebar, and detail card position scopes! */
+  animation: userAvatarMenuFadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes userAvatarMenuFadeIn {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(2px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(8px) scale(1);
+  }
+}
+
+.user-avatar-menu__item {
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  color: rgba(255, 255, 255, 0.95);
+  padding: 9px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  white-space: nowrap;
+  transition: background-color 0.2s, color 0.2s;
+  width: 100%;
+}
+
+.user-avatar-menu__item:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+}
+
+.user-avatar-menu__divider {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.12);
+  margin: 4px 6px;
+}
+
+.user-avatar-menu__item--cancel {
+  color: rgba(255, 255, 255, 0.5);
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.user-avatar-menu__item--cancel:hover {
+  background: rgba(255, 74, 74, 0.18);
+  color: #ff6b6b;
 }

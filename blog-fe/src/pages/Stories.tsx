@@ -25,8 +25,8 @@ export default function StoriesPage() {
   const [isMuted, setIsMuted] = useState(false);
   const audioPlayerRef = useRef<HTMLAudioElement | null>(null);
 
-  // Time progress bar settings (15 seconds display duration)
-  const duration = 15000; // 15 seconds
+  // Time progress bar settings (10 seconds display duration)
+  const duration = 10000; // 10 seconds
   const [progress, setProgress] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
   const progressIntervalRef = useRef<number | null>(null);
