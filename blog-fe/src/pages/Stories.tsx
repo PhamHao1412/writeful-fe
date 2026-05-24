@@ -207,19 +207,21 @@ export default function StoriesPage() {
     }
   };
 
+  const handleCloseAndGoBack = () => {
+    // Navigate back in history if possible, otherwise fallback to home
+    if (window.history.length > 1) {
+      nav(-1);
+    } else {
+      nav("/posts");
+    }
+  };
+
   const handleNextSlide = () => {
     if (currentSlideIdx < currentGroup.stories.length - 1) {
       setCurrentSlideIdx(prev => prev + 1);
-    } else if (currentGroupIdx < groups.length - 1) {
-      // Go to next user's first story
-      const nextGroup = groups[currentGroupIdx + 1];
-      const nextIdx = currentGroupIdx + 1;
-      setCurrentGroupIdx(nextIdx);
-      setCurrentSlideIdx(0);
-      setSearchParams({ userId: nextGroup.user_id });
     } else {
-      // Reached the absolute end of all stories, return to home
-      nav("/posts");
+      // Reached the absolute end of this user's story group, automatically return to previous page
+      handleCloseAndGoBack();
     }
   };
 
@@ -416,7 +418,7 @@ export default function StoriesPage() {
         ) : (
           <>
             {/* Floating Chevrons outside the Card wrapper */}
-            {(currentGroupIdx > 0 || currentSlideIdx > 0) && (
+            {currentSlideIdx > 0 && (
               <button
                 type="button"
                 className="story-viewer__nav-btn story-viewer__nav-btn--prev"
@@ -426,7 +428,7 @@ export default function StoriesPage() {
               </button>
             )}
 
-            {(currentGroupIdx < groups.length - 1 || currentSlideIdx < currentGroup.stories.length - 1) && (
+            {currentSlideIdx < currentGroup.stories.length - 1 && (
               <button
                 type="button"
                 className="story-viewer__nav-btn story-viewer__nav-btn--next"

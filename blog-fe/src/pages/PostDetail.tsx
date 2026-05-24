@@ -5,6 +5,7 @@ import { getProfile, type UserProfile } from "../api/auth.api";
 import { getErrorMessage } from "../api/http";
 import { showToast } from "../components/Toast";
 import { showConfirm } from "../components/ConfirmModal";
+import { UserAvatar } from "../components/UserAvatar";
 import MDEditor from "@uiw/react-md-editor";
 import "../styles/PostDetail.css";
 
@@ -110,13 +111,13 @@ export default function PostDetailPage() {
                     )}
 
                     <div className="post-article__author-block">
-                        <Link to={`/users/${post.user?.username}`} className="post-article__author-avatar-link">
-                            <img
-                                src={post.user?.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(post.user?.display_name || "User")}&background=random`}
-                                alt={post.user?.display_name || "Author"}
-                                className="post-article__author-avatar"
-                            />
-                        </Link>
+                        <UserAvatar
+                            userId={post.user?.id}
+                            avatarUrl={post.user?.avatar_url}
+                            displayName={post.user?.display_name}
+                            username={post.user?.username}
+                            size={48}
+                        />
                         <div className="post-article__author-info">
                             <div className="post-article__author-name">
                                 <Link to={`/users/${post.user?.username}`} className="post-article__author-link">

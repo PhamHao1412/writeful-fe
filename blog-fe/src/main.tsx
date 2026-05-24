@@ -3,6 +3,7 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom'
 import { AuthProvider } from './contexts/AuthContext'
+import { StoriesProvider } from './contexts/StoriesContext'
 import { CallProvider } from './contexts/CallContext'
 import { CallOverlay } from './components/CallOverlay'
 import { ToastContainer } from './components/Toast'
@@ -15,12 +16,14 @@ createRoot(document.getElementById('root')!).render(
     <StrictMode>
         <BrowserRouter>
             <AuthProvider>
-                <CallProvider>
-                    <App />
-                    <CallOverlay />
-                    <ToastContainer />
-                    <ConfirmModal />
-                </CallProvider>
+                <StoriesProvider>
+                    <CallProvider>
+                        <App />
+                        <CallOverlay />
+                        <ToastContainer />
+                        <ConfirmModal />
+                    </CallProvider>
+                </StoriesProvider>
             </AuthProvider>
         </BrowserRouter>
     </StrictMode>,

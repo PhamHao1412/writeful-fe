@@ -1,6 +1,7 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { type UserProfile, getProfile } from "../api/auth.api";
+import { UserAvatar } from "./UserAvatar";
 import "../styles/Sidebar.css";
 
 interface SidebarProps {
@@ -94,10 +95,12 @@ export default function Sidebar({ userProfile: propProfile, isOpen = false, onCl
                     {userProfile?.username && (
                         <Link to={`/users/${userProfile.username}`} className={`sidebar__item ${isActive(`/users/${userProfile.username}`) ? "sidebar__item--active" : ""}`}>
                             <span className="sidebar__icon">
-                                <img
-                                    src={userProfile.avatar_url || "https://ui-avatars.com/api/?name=" + (userProfile.display_name || userProfile.username) + "&background=random"}
-                                    alt={userProfile.display_name || userProfile.username || "Profile"}
-                                    style={{ width: 24, height: 24, borderRadius: '50%', objectFit: 'cover' }}
+                                <UserAvatar
+                                    userId={userProfile.id}
+                                    avatarUrl={userProfile.avatar_url}
+                                    displayName={userProfile.display_name}
+                                    username={userProfile.username}
+                                    size={24}
                                 />
                             </span>
                             <span className="sidebar__label">{userProfile.display_name || userProfile.username}</span>

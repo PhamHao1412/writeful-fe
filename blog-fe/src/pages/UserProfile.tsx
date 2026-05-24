@@ -13,6 +13,7 @@ import {
 import { listPosts, type PostListItem } from "../api/post.api";
 import { getErrorMessage } from "../api/http";
 import { showToast } from "../components/Toast";
+import { UserAvatar } from "../components/UserAvatar";
 import "../styles/UserProfile.css";
 
 export default function UserProfilePage() {
@@ -213,9 +214,12 @@ export default function UserProfilePage() {
                             </div>
                         </div>
 
-                        <img
-                            src={profile.avatar_url || "https://via.placeholder.com/120"}
-                            alt={profile.username}
+                        <UserAvatar
+                            userId={profile.id}
+                            avatarUrl={profile.avatar_url}
+                            displayName={profile.display_name}
+                            username={profile.username}
+                            size={120}
                             className="user-profile__avatar"
                         />
                     </div>
@@ -289,9 +293,12 @@ export default function UserProfilePage() {
                                                             nav(`/users/${user.username}`);
                                                         }}
                                                     >
-                                                        <img
-                                                            src={user.avatar_url || "https://via.placeholder.com/48"}
-                                                            alt={user.username}
+                                                        <UserAvatar
+                                                            userId={user.id}
+                                                            avatarUrl={user.avatar_url}
+                                                            displayName={user.display_name}
+                                                            username={user.username}
+                                                            size={48}
                                                             className="user-profile__user-avatar"
                                                         />
                                                         <div className="user-profile__user-info">
@@ -322,9 +329,12 @@ export default function UserProfilePage() {
                                                             nav(`/users/${user.username}`);
                                                         }}
                                                     >
-                                                        <img
-                                                            src={user.avatar_url || "https://via.placeholder.com/48"}
-                                                            alt={user.username}
+                                                        <UserAvatar
+                                                            userId={user.id}
+                                                            avatarUrl={user.avatar_url}
+                                                            displayName={user.display_name}
+                                                            username={user.username}
+                                                            size={48}
                                                             className="user-profile__user-avatar"
                                                         />
                                                         <div className="user-profile__user-info">

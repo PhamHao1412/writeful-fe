@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { listPosts, type PostListItem } from "../api/post.api";
 import { getErrorMessage } from "../api/http";
 import { StoriesBar } from "../components/StoriesBar";
+import { UserAvatar } from "../components/UserAvatar";
 import "../styles/PostList.css";
 
 type FilterType = "all" | "published" | "drafts";
@@ -94,10 +95,12 @@ export default function PostListPage() {
                                                 nav(`/users/${post.user.username}`);
                                             }}
                                         >
-                                            <img
-                                                src={post.user.avatar_url || "https://via.placeholder.com/40"}
-                                                alt={post.user.username}
-                                                className="post-card__avatar"
+                                            <UserAvatar
+                                                userId={post.user.id}
+                                                avatarUrl={post.user.avatar_url}
+                                                displayName={post.user.display_name}
+                                                username={post.user.username}
+                                                size={40}
                                             />
                                             <div className="post-card__meta-group">
                                                 <span className="post-card__author-name">{post.user.display_name}</span>
