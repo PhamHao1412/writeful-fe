@@ -43,19 +43,54 @@ export default function ChatWindow({ conversation, currentUserId, onDeleteConver
         if (messages.length === 0) return;
         const lastMsg = messages[messages.length - 1];
         if (lastMsg.sender_id !== currentUserId && lastMsg.id !== lastMarkedMessageId) {
-            setLastMarkedMessageId(lastMsg.id);
-            markConversationAsRead(conversation.id)
-                .then(() => {
-                    // Dispatch optimistic event to update unread counts
-                    window.dispatchEvent(new CustomEvent('conversation-read', {
-                        detail: { conversationId: conversation.id }
-                    }));
-                })
-                .catch((error) => {
-                    console.error('Error marking conversation as read on new message:', error);
-                    setLastMarkedMessageId(null);
-                });
+            // Only automatically mark as read if the browser/tab is actively focused
+            if (document.hasFocus()) {
+                setLastMarkedMessageId(lastMsg.id);
+                markConversationAsRead(conversation.id)
+                    .then(() => {
+                        // Dispatch optimistic event to update unread counts
+                        window.dispatchEvent(new CustomEvent('conversation-read', {
+                            detail: { conversationId: conversation.id }
+                        }));
+                    })
+                    .catch((error) => {
+                        console.error('Error marking conversation as read on new message:', error);
+                        setLastMarkedMessageId(null);
+                    });
+            }
         }
+    }, [messages, conversation.id, currentUserId, lastMarkedMessageId]);
+
+    // Handle window focus to mark conversation as read when the user actively returns to the tab
+    useEffect(() => {
+        const handleWindowFocus = () => {
+            if (messages.length === 0) return;
+            const lastMsg = messages[messages.length - 1];
+            if (lastMsg.sender_id !== currentUserId && lastMsg.id !== lastMarkedMessageId) {
+                setLastMarkedMessageId(lastMsg.id);
+                markConversationAsRead(conversation.id)
+                    .then(() => {
+                        window.dispatchEvent(new CustomEvent('conversation-read', {
+                            detail: { conversationId: conversation.id }
+                        }));
+                    })
+                    .catch((error) => {
+                        console.error('Error marking conversation as read on window focus:', error);
+                        setLastMarkedMessageId(null);
+                    });
+            }
+        };
+
+        window.addEventListener('focus', handleWindowFocus);
+        
+        // Check immediately in case the component has focused on mount
+        if (document.hasFocus()) {
+            handleWindowFocus();
+        }
+
+        return () => {
+            window.removeEventListener('focus', handleWindowFocus);
+        };
     }, [messages, conversation.id, currentUserId, lastMarkedMessageId]);
 
     // Periodic tick to update "last active X minutes ago" text in real-time
@@ -447,6 +482,10 @@ export default function ChatWindow({ conversation, currentUserId, onDeleteConver
     const handleInputClick = () => {
         // Mark as read when user clicks on input (shows intent to read and reply)
         // hasMarkedAsRead is reset to false when new messages arrive from others
+        if (messages.length > 0) {
+            const lastMsg = messages[messages.length - 1];
+            setLastMarkedMessageId(lastMsg.id);
+        }
         if (!hasMarkedAsRead) {
             setHasMarkedAsRead(true);
 
@@ -463,6 +502,7 @@ export default function ChatWindow({ conversation, currentUserId, onDeleteConver
                     console.error('Error marking conversation as read:', error);
                     // Revert flag on error
                     setHasMarkedAsRead(false);
+                    setLastMarkedMessageId(null);
                 });
         }
     };
@@ -746,6 +786,7 @@ export default function ChatWindow({ conversation, currentUserId, onDeleteConver
                         value={inputValue}
                         onChange={handleInputChange}
                         onClick={handleInputClick}
+                        onFocus={handleInputClick}
                         placeholder="Message..."
                         className="chat-window__text-input"
                         disabled={isSending || isUploading}
