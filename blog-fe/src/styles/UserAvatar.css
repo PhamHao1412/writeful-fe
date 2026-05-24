@@ -1,0 +1,46 @@
+/* src/styles/UserAvatar.css */
+
+.user-avatar-wrapper {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  box-sizing: border-box;
+  transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.user-avatar-wrapper:hover {
+  transform: scale(1.06);
+}
+
+/* Gradient colorful ring for unread stories */
+.user-avatar-wrapper--unread {
+  background: linear-gradient(45deg, #fdf497 0%, #f58529 25%, #dd2a7b 50%, #8134af 75%, #515bd4 100%);
+}
+
+/* Simple dark/gray ring for read stories */
+.user-avatar-wrapper--read {
+  background: rgba(130, 130, 130, 0.4);
+}
+
+.user-avatar-img {
+  border-radius: 50%;
+  object-fit: cover;
+  display: block;
+  box-sizing: border-box;
+}
+
+.user-avatar-img--has-story {
+  /* Separator space border matching page backgrounds dynamically */
+  background-color: var(--body-bg, #0b0b0b);
+}
+
+.user-avatar-img--clickable {
+  cursor: pointer;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.user-avatar-img--clickable:hover {
+  opacity: 0.9;
+  transform: scale(1.02);
+}
