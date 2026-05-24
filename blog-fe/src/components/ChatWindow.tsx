@@ -212,10 +212,6 @@ export default function ChatWindow({ conversation, currentUserId, onDeleteConver
         if (currentSelectedImage) {
             setIsUploading(true);
         }
-        setSelectedImage(null); // Clear selected image state immediately
-        if (fileInputRef.current) {
-            fileInputRef.current.value = '';
-        }
 
         try {
             if (currentSelectedImage) {
@@ -232,6 +228,12 @@ export default function ChatWindow({ conversation, currentUserId, onDeleteConver
                 media_url: imageUrl || undefined
             });
 
+            // Clear selected image state only on success
+            setSelectedImage(null);
+            if (fileInputRef.current) {
+                fileInputRef.current.value = '';
+            }
+
             // Stop typing indicator
             chatWebSocket.sendTypingIndicator(conversation.id, currentUserId, false);
         } catch (error) {
@@ -239,7 +241,6 @@ export default function ChatWindow({ conversation, currentUserId, onDeleteConver
             alert('Failed to send message');
             // Restore state on error
             if (messageContent) setInputValue(messageContent);
-            if (currentSelectedImage) setSelectedImage(currentSelectedImage);
         } finally {
             setIsSending(false);
             setIsUploading(false);
