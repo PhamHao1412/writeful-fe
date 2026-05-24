@@ -14,7 +14,7 @@ interface StoryViewerModalProps {
 }
 
 export function StoryViewerModal({ groups, initialGroupIndex, onClose }: StoryViewerModalProps) {
-  const { refreshStories } = useStories();
+  const { markStoryAsSeenLocally } = useStories();
   const [currentGroupIdx, setCurrentGroupIdx] = useState(initialGroupIndex);
   const [currentSlideIdx, setCurrentSlideIdx] = useState(0);
   
@@ -40,8 +40,10 @@ export function StoryViewerModal({ groups, initialGroupIndex, onClose }: StoryVi
   // Mark story as read when it displays
   const markAsRead = async (storyId: string) => {
     try {
-      await storyApi.markAsSeen(storyId);
-      refreshStories();
+      storyApi.markAsSeen(storyId).catch((err) => {
+        console.error("Failed to mark story as seen in backend:", err);
+      });
+      markStoryAsSeenLocally(storyId);
     } catch (err) {
       console.error("Failed to mark story as seen:", err);
     }

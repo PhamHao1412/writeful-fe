@@ -3,22 +3,21 @@ import { useEffect, useState, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { useStories } from "../contexts/StoriesContext";
-import { storyApi, type UserStoriesGroup } from "../api/story.api";
+import { storyApi } from "../api/story.api";
 import { createConversation, sendMessage } from "../api/chat.api";
 import { showToast } from "../components/Toast";
 import "../styles/Stories.css";
 
 export default function StoriesPage() {
   const { profile } = useAuth();
-  const { refreshStories } = useStories();
+  const { groups, refreshStories, markStoryAsSeenLocally, deleteStoryLocally } = useStories();
   const nav = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
 
-  const [groups, setGroups] = useState<UserStoriesGroup[]>([]);
-  const [currentGroupIdx, setCurrentGroupIdx] = useState<number>(0);
+  const [currentGroupIdx, setCurrentGroupIdx] = useState<number | null>(null);
   const [currentSlideIdx, setCurrentSlideIdx] = useState<number>(0);
 
-  const currentGroup = groups[currentGroupIdx];
+  const currentGroup = currentGroupIdx !== null ? groups[currentGroupIdx] : undefined;
   const currentSlide = currentGroup?.stories?.[currentSlideIdx];
 
   // Audio Playback settings
@@ -37,78 +36,43 @@ export default function StoriesPage() {
   const [replyText, setReplyText] = useState("");
   const [sendingReply, setSendingReply] = useState(false);
 
-  // Load all stories from API
-  const fetchStories = async () => {
-    try {
-      const res = await storyApi.getStories();
-      if (res.data?.data) {
-        const fetchedGroups = res.data.data;
-        setGroups(fetchedGroups);
-
-        // Determine which story group to highlight based on URL query param
-        const userIdParam = searchParams.get("userId");
-        if (userIdParam && fetchedGroups.length > 0) {
-          const matchIdx = fetchedGroups.findIndex((g: UserStoriesGroup) => g.user_id === userIdParam);
-          if (matchIdx !== -1) {
-            setCurrentGroupIdx(matchIdx);
-            setCurrentSlideIdx(0);
-            return;
-          }
-        }
-        
-        // Default to first group if no match or parameter
-        if (fetchedGroups.length > 0) {
-          setCurrentGroupIdx(0);
-          setCurrentSlideIdx(0);
-        }
-      }
-    } catch (err) {
-      console.error("Failed to load stories:", err);
-      showToast("Failed to load stories.", "error");
-    }
-  };
-
   useEffect(() => {
-    fetchStories();
+    refreshStories();
   }, []);
 
-  // Sync index with query parameters when URL updates
+  // Sync index with query parameters when URL updates or groups load
   useEffect(() => {
+    if (groups.length === 0) return;
+
     const userIdParam = searchParams.get("userId");
-    if (userIdParam && groups.length > 0) {
+    if (userIdParam) {
       const matchIdx = groups.findIndex((g) => g.user_id === userIdParam);
-      if (matchIdx !== -1 && matchIdx !== currentGroupIdx) {
-        setCurrentGroupIdx(matchIdx);
-        setCurrentSlideIdx(0);
+      if (matchIdx !== -1) {
+        if (currentGroupIdx !== matchIdx) {
+          setCurrentGroupIdx(matchIdx);
+          setCurrentSlideIdx(0);
+        }
+        return;
       }
     }
-  }, [searchParams, groups]);
+    
+    // Default to first group if no match or parameter, and we are not yet initialized
+    if (currentGroupIdx === null) {
+      setCurrentGroupIdx(0);
+      setCurrentSlideIdx(0);
+    }
+  }, [searchParams, groups, currentGroupIdx]);
 
   // Mark story as read when it displays
   const markAsRead = async (storyId: string) => {
     try {
-      await storyApi.markAsSeen(storyId);
-      
-      // Update local state immediately for high responsiveness
-      setGroups(prevGroups => {
-        return prevGroups.map(g => {
-          const updatedStories = g.stories.map(s => {
-            if (s.id === storyId) {
-              return { ...s, seen: true };
-            }
-            return s;
-          });
-          
-          return {
-            ...g,
-            stories: updatedStories,
-            has_unread: g.user_id === profile?.id ? false : updatedStories.some(s => !s.seen)
-          };
-        });
+      // 1. Persist to DB in the background
+      storyApi.markAsSeen(storyId).catch((err) => {
+        console.error("Failed to mark story as seen in backend:", err);
       });
-
-      // Synchronize the global context state so other pages (Home Feed, Chat) get instant read status
-      refreshStories();
+      
+      // 2. Instantly update seen state in global context synchronously to avoid API race conditions
+      markStoryAsSeenLocally(storyId);
     } catch (err) {
       console.error("Failed to mark story as seen:", err);
     }
@@ -233,7 +197,7 @@ export default function StoriesPage() {
   const handlePrevSlide = () => {
     if (currentSlideIdx > 0) {
       setCurrentSlideIdx(prev => prev - 1);
-    } else if (currentGroupIdx > 0) {
+    } else if (currentGroupIdx !== null && currentGroupIdx > 0) {
       // Go to previous user's last story
       const prevGroup = groups[currentGroupIdx - 1];
       const prevIdx = currentGroupIdx - 1;
@@ -322,11 +286,57 @@ export default function StoriesPage() {
     handleReactionSubmit(replyText);
   };
 
+  const handleDeleteStory = async () => {
+    if (!currentSlide) return;
+    setIsPaused(true);
+    
+    const ok = window.confirm("Are you sure you want to delete this story slide?");
+    if (!ok) {
+      setIsPaused(false);
+      return;
+    }
+
+    try {
+      await storyApi.deleteStory(currentSlide.id);
+      showToast("Story deleted successfully!", "success");
+
+      const storiesCount = currentGroup?.stories?.length || 0;
+      
+      if (storiesCount > 1) {
+        // If there are other slides, safely adjust index before updating local context
+        if (currentSlideIdx >= storiesCount - 1) {
+          // If we deleted the last slide, go back to the previous one
+          setCurrentSlideIdx(storiesCount - 2);
+        }
+        resetProgress();
+        deleteStoryLocally(currentSlide.id);
+      } else {
+        // If this was the only slide in the group, close and return to previous page
+        deleteStoryLocally(currentSlide.id);
+        handleCloseAndGoBack();
+      }
+    } catch (err) {
+      console.error("Failed to delete story:", err);
+      showToast("Failed to delete story.", "error");
+      setIsPaused(false);
+    }
+  };
+
   const handleSelectUserFromSidebar = (idx: number, userId: string) => {
     setCurrentGroupIdx(idx);
     setCurrentSlideIdx(0);
     setSearchParams({ userId });
   };
+
+  if (groups.length > 0 && currentGroupIdx === null) {
+    return (
+      <div className="story-viewer-overlay" style={{ position: "relative", height: "100vh", zIndex: 1, display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <div className="story-viewer__sidebar-logo" style={{ fontSize: "20px", color: "rgba(255,255,255,0.6)" }}>
+          Loading stories...
+        </div>
+      </div>
+    );
+  }
 
   // Find if current user has any active story
   const myGroup = groups.find(g => g.user_id === profile?.id);
@@ -377,7 +387,7 @@ export default function StoriesPage() {
 
           {myGroup ? (
             <div
-              className={`story-viewer__sidebar-item ${groups[currentGroupIdx]?.user_id === profile?.id ? "story-viewer__sidebar-item--active" : ""}`}
+              className={`story-viewer__sidebar-item ${currentGroupIdx !== null && groups[currentGroupIdx]?.user_id === profile?.id ? "story-viewer__sidebar-item--active" : ""}`}
               onClick={() => {
                 const idx = groups.findIndex(g => g.user_id === profile?.id);
                 if (idx !== -1) handleSelectUserFromSidebar(idx, profile?.id || "");
@@ -531,6 +541,16 @@ export default function StoriesPage() {
                 </div>
                 
                 <div className="story-viewer__controls">
+                  {currentSlide?.user_id === profile?.id && (
+                    <button
+                      className="story-viewer__btn"
+                      onClick={handleDeleteStory}
+                      title="Delete Story"
+                      style={{ color: "#ff4a4a" }}
+                    >
+                      🗑️
+                    </button>
+                  )}
                   {currentSlide?.audio_url && (
                     <button
                       className="story-viewer__btn"

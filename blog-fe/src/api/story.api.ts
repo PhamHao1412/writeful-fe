@@ -56,6 +56,11 @@ export const storyApi = {
     return contentHttp.post(`/content/api/v1/stories/${storyId}/seen`);
   },
 
+  // Delete a story slide
+  deleteStory: (storyId: string) => {
+    return contentHttp.delete(`/content/api/v1/stories/${storyId}`);
+  },
+
   // Fetch shared server music catalog
   getMusics: (genre?: string, search?: string) => {
     return contentHttp.get<{ data: MusicTrack[] }>('/content/api/v1/musics', {
