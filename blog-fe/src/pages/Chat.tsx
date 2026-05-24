@@ -11,6 +11,11 @@ import { showToast } from '../components/Toast';
 import { showConfirm } from '../components/ConfirmModal';
 import '../styles/Chat.css';
 
+export interface ActiveStatus {
+    isOnline: boolean;
+    lastActiveAt?: string;
+}
+
 export default function Chat() {
     const navigate = useNavigate();
     const [searchParams, setSearchParams] = useSearchParams();
@@ -21,6 +26,7 @@ export default function Chat() {
     const [showNewChatModal, setShowNewChatModal] = useState(false);
     const [newChatUserId, setNewChatUserId] = useState('');
     const [isCreatingChat, setIsCreatingChat] = useState(false);
+    const [activeStatuses, setActiveStatuses] = useState<Record<string, ActiveStatus>>({});
 
     useEffect(() => {
         initializeChat();
@@ -37,6 +43,40 @@ export default function Chat() {
             if (data.type === 'new_message') {
                 // Reload conversations to update last message and unread count
                 loadConversations();
+            }
+        });
+
+        return unsubscribe;
+    }, []);
+
+    // Listen for real-time user online/offline status updates
+    useEffect(() => {
+        const unsubscribe = chatWebSocket.onMessage((data) => {
+            if (data.type === 'online_users') {
+                const onlineIds: string[] = data.payload || [];
+                setActiveStatuses(prev => {
+                    const next = { ...prev };
+                    onlineIds.forEach(id => {
+                        next[id] = { ...next[id], isOnline: true };
+                    });
+                    return next;
+                });
+            } else if (data.type === 'user_online') {
+                const { user_id } = data.payload || {};
+                if (user_id) {
+                    setActiveStatuses(prev => ({
+                        ...prev,
+                        [user_id]: { ...prev[user_id], isOnline: true }
+                    }));
+                }
+            } else if (data.type === 'user_offline') {
+                const { user_id, last_active_at } = data.payload || {};
+                if (user_id) {
+                    setActiveStatuses(prev => ({
+                        ...prev,
+                        [user_id]: { isOnline: false, lastActiveAt: last_active_at }
+                    }));
+                }
             }
         });
 
@@ -100,6 +140,20 @@ export default function Chat() {
         try {
             const { data } = await getConversations({ page: 1, page_size: 50 });
             setConversations(data);
+
+            // Populate initial active statuses from conversation participants data
+            const initialStatuses: Record<string, ActiveStatus> = {};
+            data.forEach(conv => {
+                conv.participants.forEach(p => {
+                    if (p.user) {
+                        initialStatuses[p.user.id] = {
+                            isOnline: false,
+                            lastActiveAt: p.user.last_active_at,
+                        };
+                    }
+                });
+            });
+            setActiveStatuses(prev => ({ ...initialStatuses, ...prev }));
 
             // Restore selected conversation from URL if exists
             const conversationIdFromUrl = searchParams.get('conversation');
@@ -252,6 +306,7 @@ export default function Chat() {
                     <FollowingList
                         currentUserId={currentUserId}
                         onSelectUser={handleSelectFollowingUser}
+                        activeStatuses={activeStatuses}
                     />
 
                     <ConversationList
@@ -260,6 +315,7 @@ export default function Chat() {
                         currentUserId={currentUserId}
                         onSelectConversation={handleSelectConversation}
                         onDeleteConversation={handleDeleteConversation}
+                        activeStatuses={activeStatuses}
                     />
 
                     {/* New Chat Button */}
@@ -282,6 +338,7 @@ export default function Chat() {
                                 setSelectedConversation(null);
                                 setSearchParams({});
                             }}
+                            activeStatuses={activeStatuses}
                         />
                     ) : (
                         <div className="chat-page__empty">

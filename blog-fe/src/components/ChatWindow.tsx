@@ -8,6 +8,7 @@ import { chatWebSocket } from '../services/chatWebSocket';
 import MessageBubble from './MessageBubble';
 import { useCall } from '../contexts/CallContext';
 import { showToast } from './Toast';
+import type { ActiveStatus } from '../pages/Chat';
 import '../styles/ChatWindow.css';
 
 interface ChatWindowProps {
@@ -15,9 +16,10 @@ interface ChatWindowProps {
     currentUserId: string;
     onDeleteConversation?: () => void;
     onBack?: () => void; // For mobile: go back to conversation list
+    activeStatuses?: Record<string, ActiveStatus>;
 }
 
-export default function ChatWindow({ conversation, currentUserId, onDeleteConversation, onBack }: ChatWindowProps) {
+export default function ChatWindow({ conversation, currentUserId, onDeleteConversation, onBack, activeStatuses = {} }: ChatWindowProps) {
     const navigate = useNavigate();
     const { startCall } = useCall();
     const [messages, setMessages] = useState<Message[]>([]);
@@ -31,6 +33,57 @@ export default function ChatWindow({ conversation, currentUserId, onDeleteConver
     const typingTimeoutRef = useRef<number | null>(null);
     const inputRef = useRef<HTMLInputElement>(null);
     const emojiPickerRef = useRef<HTMLDivElement>(null);
+
+    // Periodic tick to update "last active X minutes ago" text in real-time
+    const [, setTick] = useState(0);
+    useEffect(() => {
+        const interval = setInterval(() => {
+            setTick(t => t + 1);
+        }, 30000); // Rerender every 30 seconds for extra freshness!
+        return () => clearInterval(interval);
+    }, []);
+
+    // Format online status or last active time
+    const getActiveStatusText = () => {
+        if (conversation.type === 'group') {
+            return `${conversation.participants.length} members`;
+        }
+
+        const otherParticipant = conversation.participants.find(p => p.user_id !== currentUserId);
+        if (!otherParticipant) return 'Direct message';
+
+        const status = activeStatuses[otherParticipant.user_id];
+        if (!status) return 'Offline';
+
+        if (status.isOnline) {
+            return 'Active now';
+        }
+
+        if (!status.lastActiveAt) {
+            return 'Offline';
+        }
+
+        const date = new Date(status.lastActiveAt);
+        const now = new Date();
+        const diffInSeconds = Math.max(0, Math.floor((now.getTime() - date.getTime()) / 1000));
+
+        if (diffInSeconds < 60) {
+            return 'Active just now';
+        }
+
+        const diffInMinutes = Math.floor(diffInSeconds / 60);
+        if (diffInMinutes < 60) {
+            return `Active ${diffInMinutes}m ago`;
+        }
+
+        const diffInHours = Math.floor(diffInMinutes / 60);
+        if (diffInHours < 24) {
+            return `Active ${diffInHours}h ago`;
+        }
+
+        const diffInDays = Math.floor(diffInHours / 24);
+        return `Active ${diffInDays}d ago`;
+    };
 
     // Image upload states & reference
     const [selectedImage, setSelectedImage] = useState<File | null>(null);
@@ -331,35 +384,40 @@ export default function ChatWindow({ conversation, currentUserId, onDeleteConver
                     </button>
                 )}
                 <div className="chat-window__header-info">
-                    {typeof getConversationAvatar() === 'string' && getConversationAvatar().startsWith('http') ? (
-                        <img
-                            src={getConversationAvatar()}
-                            alt={getConversationName()}
-                            className="chat-window__avatar"
-                            onClick={handleAvatarClick}
-                            style={{ cursor: conversation.type === 'direct' ? 'pointer' : 'default' }}
-                            title={conversation.type === 'direct' ? 'View profile' : ''}
-                            onError={(e) => {
-                                const name = getConversationName();
-                                e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random`;
-                            }}
-                        />
-                    ) : (
-                        <div
-                            className="chat-window__avatar-emoji"
-                            onClick={handleAvatarClick}
-                            style={{ cursor: conversation.type === 'direct' ? 'pointer' : 'default' }}
-                            title={conversation.type === 'direct' ? 'View profile' : ''}
-                        >
-                            {getConversationAvatar()}
-                        </div>
-                    )}
+                    <div className="chat-window__avatar-wrapper">
+                        {typeof getConversationAvatar() === 'string' && getConversationAvatar().startsWith('http') ? (
+                            <img
+                                src={getConversationAvatar()}
+                                alt={getConversationName()}
+                                className="chat-window__avatar"
+                                onClick={handleAvatarClick}
+                                style={{ cursor: conversation.type === 'direct' ? 'pointer' : 'default' }}
+                                title={conversation.type === 'direct' ? 'View profile' : ''}
+                                onError={(e) => {
+                                    const name = getConversationName();
+                                    e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random`;
+                                }}
+                            />
+                        ) : (
+                            <div
+                                className="chat-window__avatar-emoji"
+                                onClick={handleAvatarClick}
+                                style={{ cursor: conversation.type === 'direct' ? 'pointer' : 'default' }}
+                                title={conversation.type === 'direct' ? 'View profile' : ''}
+                            >
+                                {getConversationAvatar()}
+                            </div>
+                        )}
+                        {conversation.type === 'direct' && (() => {
+                            const otherParticipant = conversation.participants.find(p => p.user_id !== currentUserId);
+                            const isOnline = otherParticipant ? (activeStatuses[otherParticipant.user_id]?.isOnline || false) : false;
+                            return isOnline ? <span className="chat-window__online-badge"></span> : null;
+                        })()}
+                    </div>
                     <div>
                         <h2 className="chat-window__title">{getConversationName()}</h2>
                         <p className="chat-window__subtitle">
-                            {conversation.type === 'group'
-                                ? `${conversation.participants.length} members`
-                                : 'Direct message'}
+                            {getActiveStatusText()}
                         </p>
                     </div>
                 </div>

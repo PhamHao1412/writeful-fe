@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { getFollowing } from '../api/auth.api';
+import type { ActiveStatus } from '../pages/Chat';
 import '../styles/FollowingList.css';
 
 interface User {
@@ -12,9 +13,10 @@ interface User {
 interface FollowingListProps {
     currentUserId: string;
     onSelectUser: (userId: string) => void;
+    activeStatuses?: Record<string, ActiveStatus>;
 }
 
-export default function FollowingList({ currentUserId, onSelectUser }: FollowingListProps) {
+export default function FollowingList({ currentUserId, onSelectUser, activeStatuses = {} }: FollowingListProps) {
     const [following, setFollowing] = useState<User[]>([]);
     const [isLoading, setIsLoading] = useState(true);
 
@@ -57,23 +59,27 @@ export default function FollowingList({ currentUserId, onSelectUser }: Following
         <div className="following-list">
             <h3 className="following-list__title">Messages</h3>
             <div className="following-list__scroll">
-                {following.map((user) => (
-                    <button
-                        key={user.id}
-                        className="following-list__user"
-                        onClick={() => onSelectUser(user.id)}
-                        title={user.display_name}
-                    >
-                        <div className="following-list__avatar-wrapper">
-                            <img
-                                src={user.avatar_url || 'https://via.placeholder.com/60'}
-                                alt={user.display_name}
-                                className="following-list__avatar"
-                            />
-                        </div>
-                        <span className="following-list__name">{user.display_name}</span>
-                    </button>
-                ))}
+                {following.map((user) => {
+                    const isOnline = activeStatuses[user.id]?.isOnline || false;
+                    return (
+                        <button
+                            key={user.id}
+                            className="following-list__user"
+                            onClick={() => onSelectUser(user.id)}
+                            title={user.display_name}
+                        >
+                            <div className="following-list__avatar-wrapper">
+                                <img
+                                    src={user.avatar_url || 'https://via.placeholder.com/60'}
+                                    alt={user.display_name}
+                                    className="following-list__avatar"
+                                />
+                                {isOnline && <span className="following-list__online-badge"></span>}
+                            </div>
+                            <span className="following-list__name">{user.display_name}</span>
+                        </button>
+                    );
+                })}
             </div>
         </div>
     );

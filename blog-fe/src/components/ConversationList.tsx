@@ -1,4 +1,5 @@
 import type { Conversation } from '../api/chat.api';
+import type { ActiveStatus } from '../pages/Chat';
 import '../styles/ConversationList.css';
 
 interface ConversationListProps {
@@ -7,6 +8,7 @@ interface ConversationListProps {
     currentUserId: string;
     onSelectConversation: (conversation: Conversation) => void;
     onDeleteConversation: (conversationId: string) => void;
+    activeStatuses?: Record<string, ActiveStatus>;
 }
 
 export default function ConversationList({
@@ -14,7 +16,8 @@ export default function ConversationList({
     selectedConversationId,
     currentUserId,
     onSelectConversation,
-    onDeleteConversation
+    onDeleteConversation,
+    activeStatuses = {}
 }: ConversationListProps) {
 
     const getConversationName = (conversation: Conversation) => {
@@ -120,6 +123,11 @@ export default function ConversationList({
                                         {getConversationAvatar(conversation)}
                                     </div>
                                 )}
+                                {conversation.type === 'direct' && (() => {
+                                    const otherParticipant = conversation.participants.find(p => p.user_id !== currentUserId);
+                                    const isOnline = otherParticipant ? (activeStatuses[otherParticipant.user_id]?.isOnline || false) : false;
+                                    return isOnline ? <span className="conversation-item__online-badge"></span> : null;
+                                })()}
                                 {shouldShowAsUnread(conversation) && (
                                     <span className="conversation-item__unread-badge">
                                         {conversation.unread_count > 99 ? '99+' : conversation.unread_count}

@@ -1,7 +1,7 @@
 import { sendSignaling } from '../api/chat.api';
 
 export interface WebSocketMessage {
-    type: 'new_message' | 'typing' | 'read' | 'user_online' | 'user_offline' | 'call_initiate' | 'call_receive' | 'call_ringing' | 'call_reject' | 'call_cancel' | 'call_hangup' | 'webrtc_offer' | 'webrtc_answer' | 'webrtc_ice_candidate';
+    type: 'new_message' | 'typing' | 'read' | 'user_online' | 'user_offline' | 'online_users' | 'call_initiate' | 'call_receive' | 'call_ringing' | 'call_reject' | 'call_cancel' | 'call_hangup' | 'webrtc_offer' | 'webrtc_answer' | 'webrtc_ice_candidate';
     payload: any;
 }
 

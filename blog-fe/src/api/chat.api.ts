@@ -11,6 +11,7 @@ export interface Participant {
         username: string;
         display_name: string;
         avatar_url: string;
+        last_active_at?: string;
     };
 }
 
