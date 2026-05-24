@@ -55,7 +55,7 @@ export function StoryViewerModal({ groups, initialGroupIndex, onClose }: StoryVi
       resetProgress();
       setupAudio();
     }
-  }, [currentGroupIdx, currentSlideIdx]);
+  }, [currentGroupIdx, currentSlideIdx, currentSlide?.id]);
 
   const resetProgress = () => {
     if (progressIntervalRef.current) {

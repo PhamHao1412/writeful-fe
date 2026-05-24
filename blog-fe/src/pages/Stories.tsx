@@ -84,7 +84,7 @@ export default function StoriesPage() {
       resetProgress();
       setupAudio();
     }
-  }, [currentGroupIdx, currentSlideIdx]);
+  }, [currentGroupIdx, currentSlideIdx, currentSlide?.id]);
 
   const resetProgress = () => {
     if (progressIntervalRef.current) {
@@ -297,6 +297,12 @@ export default function StoriesPage() {
     }
 
     try {
+      // Stop and reset audio playback immediately to avoid leakage
+      if (audioPlayerRef.current) {
+        audioPlayerRef.current.pause();
+        audioPlayerRef.current = null;
+      }
+
       await storyApi.deleteStory(currentSlide.id);
       showToast("Story deleted successfully!", "success");
 
