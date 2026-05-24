@@ -3,15 +3,12 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { storyApi, type UserStoriesGroup } from "../api/story.api";
-import { StoryCreatorModal } from "./StoryCreatorModal";
 import "../styles/Stories.css";
 
 export function StoriesBar() {
   const { profile } = useAuth();
   const nav = useNavigate();
   const [groups, setGroups] = useState<UserStoriesGroup[]>([]);
-  
-  const [isCreatorOpen, setIsCreatorOpen] = useState(false);
 
   const fetchStories = async () => {
     try {
@@ -28,11 +25,6 @@ export function StoriesBar() {
     fetchStories();
   }, []);
 
-  const handlePublishSuccess = () => {
-    setIsCreatorOpen(false);
-    fetchStories();
-  };
-
   // Find if current user has any active story
   const myGroup = groups.find(g => g.user_id === profile?.id);
   const otherGroups = groups.filter(g => g.user_id !== profile?.id);
@@ -45,7 +37,7 @@ export function StoriesBar() {
           // Navigate to dedicated Stories page and highlight self
           nav(`/stories?userId=${profile?.id}`);
         } else {
-          setIsCreatorOpen(true);
+          nav("/stories/create");
         }
       }}>
         <div className="story-item__avatar-container story-item__avatar-container--self">
@@ -78,14 +70,6 @@ export function StoriesBar() {
           </div>
         );
       })}
-
-      {/* Creator Modal */}
-      {isCreatorOpen && (
-        <StoryCreatorModal
-          onClose={() => setIsCreatorOpen(false)}
-          onSuccess={handlePublishSuccess}
-        />
-      )}
     </div>
   );
 }

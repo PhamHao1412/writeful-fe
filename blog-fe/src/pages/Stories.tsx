@@ -4,7 +4,6 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { storyApi, type UserStoriesGroup } from "../api/story.api";
 import { createConversation, sendMessage } from "../api/chat.api";
-import { StoryCreatorModal } from "../components/StoryCreatorModal";
 import { showToast } from "../components/Toast";
 import "../styles/Stories.css";
 
@@ -16,7 +15,6 @@ export default function StoriesPage() {
   const [groups, setGroups] = useState<UserStoriesGroup[]>([]);
   const [currentGroupIdx, setCurrentGroupIdx] = useState<number>(0);
   const [currentSlideIdx, setCurrentSlideIdx] = useState<number>(0);
-  const [isCreatorOpen, setIsCreatorOpen] = useState(false);
 
   const currentGroup = groups[currentGroupIdx];
   const currentSlide = currentGroup?.stories?.[currentSlideIdx];
@@ -272,11 +270,6 @@ export default function StoriesPage() {
     setSearchParams({ userId });
   };
 
-  const handlePublishSuccess = () => {
-    setIsCreatorOpen(false);
-    fetchStories();
-  };
-
   // Find if current user has any active story
   const myGroup = groups.find(g => g.user_id === profile?.id);
 
@@ -302,7 +295,7 @@ export default function StoriesPage() {
           >
             <span>Tin của bạn</span>
             <button 
-              onClick={() => setIsCreatorOpen(true)}
+              onClick={() => nav("/stories/create")}
               style={{
                 background: "rgba(0, 149, 246, 0.2)",
                 color: "#0095f6",
@@ -347,7 +340,7 @@ export default function StoriesPage() {
           ) : (
             <div
               className="story-viewer__sidebar-item"
-              onClick={() => setIsCreatorOpen(true)}
+              onClick={() => nav("/stories/create")}
               style={{ opacity: 0.8 }}
             >
               <div className="story-viewer__sidebar-avatar-ring story-viewer__sidebar-avatar-ring--read">
@@ -411,7 +404,7 @@ export default function StoriesPage() {
             <div style={{ fontSize: "64px", marginBottom: "20px" }}>📱</div>
             <h3 style={{ fontSize: "20px", fontWeight: "600", marginBottom: "8px" }}>Kho lưu trữ trống</h3>
             <p style={{ color: "rgba(255,255,255,0.5)", fontSize: "14px", marginBottom: "24px" }}>Hãy là người đầu tiên đăng tải tin mới!</p>
-            <button className="btn btn--primary" onClick={() => setIsCreatorOpen(true)}>
+            <button className="btn btn--primary" onClick={() => nav("/stories/create")}>
               + Tạo tin ngay
             </button>
           </div>
@@ -593,13 +586,6 @@ export default function StoriesPage() {
         )}
       </div>
 
-      {/* Creator Modal (mounted inline) */}
-      {isCreatorOpen && (
-        <StoryCreatorModal
-          onClose={() => setIsCreatorOpen(false)}
-          onSuccess={handlePublishSuccess}
-        />
-      )}
     </div>
   );
 }

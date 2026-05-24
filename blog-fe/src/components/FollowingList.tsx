@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { getFollowing } from '../api/auth.api';
 import type { ActiveStatus } from '../pages/Chat';
+import { UserAvatar } from './UserAvatar';
 import '../styles/FollowingList.css';
 
 interface User {
@@ -69,10 +70,12 @@ export default function FollowingList({ currentUserId, onSelectUser, activeStatu
                             title={user.display_name}
                         >
                             <div className="following-list__avatar-wrapper">
-                                <img
-                                    src={user.avatar_url || 'https://via.placeholder.com/60'}
-                                    alt={user.display_name}
-                                    className="following-list__avatar"
+                                <UserAvatar
+                                    userId={user.id}
+                                    avatarUrl={user.avatar_url}
+                                    displayName={user.display_name}
+                                    username={user.username}
+                                    size={50}
                                 />
                                 {isOnline && <span className="following-list__online-badge"></span>}
                             </div>

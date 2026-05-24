@@ -23,8 +23,10 @@
     display: flex;
     flex-direction: column;
     gap: 12px;
-    overflow-y: auto;
-    padding-right: 4px;
+    overflow: hidden; /* Prevent double scrollbars, let ConversationList do the scrolling */
+    padding: 12px 0 0;
+    background: white;
+    border-right: 1px solid #e4e6eb; /* vertical divider line */
 }
 
 .chat-page__sidebar::-webkit-scrollbar {
@@ -108,12 +110,13 @@
 }
 
 .chat-page__new-chat-btn {
-    padding: 14px 20px;
+    margin: 4px 12px 12px;
+    padding: 12px 20px;
     background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
     color: white;
     border: none;
-    border-radius: 12px;
-    font-size: 16px;
+    border-radius: 10px;
+    font-size: 15px;
     font-weight: 600;
     cursor: pointer;
     transition: all 0.3s;
@@ -122,6 +125,7 @@
     align-items: center;
     justify-content: center;
     gap: 8px;
+    flex-shrink: 0;
 }
 
 .chat-page__new-chat-btn:hover {

@@ -13,6 +13,7 @@ import UserProfilePage from "./pages/UserProfile";
 import Activity from "./pages/Activity.tsx";
 import Chat from "./pages/Chat";
 import StoriesPage from "./pages/Stories";
+import StoriesCreatePage from "./pages/StoriesCreate";
 
 export default function App() {
     const location = useLocation();
@@ -40,6 +41,7 @@ export default function App() {
             <Route path="/activity" element={<AuthGuard><Activity /></AuthGuard>} />
             <Route path="/chat" element={<AuthGuard><Chat /></AuthGuard>} />
             <Route path="/stories" element={<AuthGuard><StoriesPage /></AuthGuard>} />
+            <Route path="/stories/create" element={<AuthGuard><StoriesCreatePage /></AuthGuard>} />
 
             <Route path="*" element={<div>Not found</div>} />
         </Routes>

@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
 import { useStories } from "../contexts/StoriesContext";
 import "../styles/UserAvatar.css";
@@ -26,20 +27,29 @@ export function UserAvatar({
   const { getUserStoryGroup } = useStories();
 
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [menuCoords, setMenuCoords] = useState<{ top: number; left: number } | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
 
-  // Close context dropdown on outside click
+  // Close context dropdown on outside click, scroll, or window resize
   useEffect(() => {
     const handleOutsideClick = (e: MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
         setIsMenuOpen(false);
       }
     };
+    const handleScrollOrResize = () => {
+      setIsMenuOpen(false);
+    };
+
     if (isMenuOpen) {
       document.addEventListener("mousedown", handleOutsideClick);
+      window.addEventListener("scroll", handleScrollOrResize, { passive: true });
+      window.addEventListener("resize", handleScrollOrResize);
     }
     return () => {
       document.removeEventListener("mousedown", handleOutsideClick);
+      window.removeEventListener("scroll", handleScrollOrResize);
+      window.removeEventListener("resize", handleScrollOrResize);
     };
   }, [isMenuOpen]);
 
@@ -55,6 +65,18 @@ export function UserAvatar({
 
     if (hasStory && userId) {
       e.stopPropagation();
+      const rect = e.currentTarget.getBoundingClientRect();
+      const menuWidth = 154;
+      let leftPos = rect.left + rect.width / 2 - menuWidth / 2;
+
+      // Clamp leftPos to avoid overflowing viewport edges (min 12px margin)
+      const maxLeft = window.innerWidth - menuWidth - 12;
+      leftPos = Math.max(12, Math.min(maxLeft, leftPos));
+
+      setMenuCoords({
+        top: rect.bottom,
+        left: leftPos,
+      });
       setIsMenuOpen(true); // Open the options dropdown
     } else if (username) {
       e.stopPropagation();
@@ -90,15 +112,19 @@ export function UserAvatar({
           style={{
             width: `${size}px`,
             height: `${size}px`,
-            border: `${size >= 40 ? 3 : 2}px solid var(--body-bg, #0b0b0b)`,
+            border: `${size >= 40 ? 3 : 2}px solid var(--avatar-spacer-color, #fff)`,
           }}
         />
 
-        {/* Floating context menu for story avatar click */}
-        {isMenuOpen && (
+        {/* Floating context menu for story avatar click using React Portal */}
+        {isMenuOpen && menuCoords && createPortal(
           <div
             ref={menuRef}
             className="user-avatar-menu"
+            style={{
+              top: `${menuCoords.top + 8}px`,
+              left: `${menuCoords.left}px`,
+            }}
             onClick={(e) => e.stopPropagation()}
           >
             <button
@@ -108,7 +134,11 @@ export function UserAvatar({
                 nav(`/stories?userId=${userId}`);
               }}
             >
-              📖 View Story
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="user-avatar-menu__icon">
+                <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" />
+                <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" />
+              </svg>
+              View Story
             </button>
             <button
               className="user-avatar-menu__item"
@@ -117,16 +147,25 @@ export function UserAvatar({
                 if (username) nav(`/users/${username}`);
               }}
             >
-              👤 View Profile
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="user-avatar-menu__icon">
+                <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
+                <circle cx="12" cy="7" r="4" />
+              </svg>
+              View Profile
             </button>
             <div className="user-avatar-menu__divider" />
             <button
               className="user-avatar-menu__item user-avatar-menu__item--cancel"
               onClick={() => setIsMenuOpen(false)}
             >
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="user-avatar-menu__icon">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+              </svg>
               Cancel
             </button>
-          </div>
+          </div>,
+          document.body
         )}
       </div>
     );
