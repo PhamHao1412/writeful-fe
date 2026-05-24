@@ -1,5 +1,6 @@
 // src/components/StoryViewerModal.tsx
 import { useEffect, useState, useRef } from "react";
+import { createPortal } from "react-dom";
 import { storyApi, type UserStoriesGroup } from "../api/story.api";
 import { createConversation, sendMessage } from "../api/chat.api";
 import { showToast } from "./Toast";
@@ -209,116 +210,193 @@ export function StoryViewerModal({ groups, initialGroupIndex, onClose }: StoryVi
     handleReactionSubmit(replyText);
   };
 
+  const handleSelectUserFromSidebar = (idx: number) => {
+    setCurrentGroupIdx(idx);
+    setCurrentSlideIdx(0);
+  };
+
   if (!currentGroup || !currentSlide) return null;
 
-  return (
-    <div className="story-viewer-overlay" onClick={onClose}>
-      <div className="story-viewer" onClick={e => e.stopPropagation()}>
-        {/* Custom Progress Indicators */}
-        <div className="story-viewer__progress-container">
-          {currentGroup.stories.map((st, idx) => {
-            let widthPercent = 0;
-            if (idx < currentSlideIdx) widthPercent = 100;
-            if (idx === currentSlideIdx) widthPercent = progress;
+  // Render modal as a Portal directly to document.body
+  return createPortal(
+    <div className="story-viewer-overlay">
+      {/* Side User List List (Sidebar) */}
+      <div className="story-viewer__sidebar">
+        <div className="story-viewer__sidebar-header">
+          <div className="story-viewer__sidebar-header-top">
+            <button className="story-viewer__sidebar-close" onClick={onClose} title="Quay lại">
+              &larr;
+            </button>
+            <span className="story-viewer__sidebar-logo">Writeful Tin</span>
+          </div>
+          <h2 className="story-viewer__sidebar-title">Tin</h2>
+        </div>
+
+        <div className="story-viewer__sidebar-list">
+          <span className="story-viewer__sidebar-subtitle">Tất cả tin</span>
+          {groups.map((group, idx) => {
+            const isActiveUser = currentGroupIdx === idx;
+            const groupLatestSlide = group.stories[group.stories.length - 1];
+            
             return (
-              <div key={st.id} className="story-viewer__progress-bar">
-                <div
-                  className="story-viewer__progress-fill"
-                  style={{ width: `${widthPercent}%` }}
-                />
+              <div
+                key={group.user_id}
+                className={`story-viewer__sidebar-item ${isActiveUser ? "story-viewer__sidebar-item--active" : ""}`}
+                onClick={() => handleSelectUserFromSidebar(idx)}
+              >
+                <div className={`story-viewer__sidebar-avatar-ring ${group.has_unread ? "story-viewer__sidebar-avatar-ring--unread" : "story-viewer__sidebar-avatar-ring--read"}`}>
+                  <img
+                    src={group.avatar_url || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100"}
+                    alt={group.username}
+                    className="story-viewer__sidebar-avatar"
+                  />
+                </div>
+                <div className="story-viewer__sidebar-item-meta">
+                  <span className="story-viewer__sidebar-username">{group.username}</span>
+                  {groupLatestSlide && (
+                    <span className="story-viewer__sidebar-time">
+                      {new Date(groupLatestSlide.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                  )}
+                </div>
               </div>
             );
           })}
         </div>
+      </div>
 
-        {/* Story Viewer Header */}
-        <header className="story-viewer__header">
-          <div className="story-viewer__user">
-            <img
-              src={currentGroup.avatar_url || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100"}
-              alt={currentGroup.username}
-              className="story-viewer__avatar"
-            />
-            <div style={{ display: "flex", flexDirection: "column" }}>
-              <span className="story-viewer__username">{currentGroup.username}</span>
-              <span className="story-viewer__time">
-                {new Date(currentSlide.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-              </span>
+      {/* Main black viewer screen */}
+      <div className="story-viewer__main">
+        {/* Floating Chevrons outside the Card wrapper */}
+        {(currentGroupIdx > 0 || currentSlideIdx > 0) && (
+          <button
+            type="button"
+            className="story-viewer__nav-btn story-viewer__nav-btn--prev"
+            onClick={handlePrevSlide}
+          >
+            &#10094;
+          </button>
+        )}
+
+        {(currentGroupIdx < groups.length - 1 || currentSlideIdx < currentGroup.stories.length - 1) && (
+          <button
+            type="button"
+            className="story-viewer__nav-btn story-viewer__nav-btn--next"
+            onClick={handleNextSlide}
+          >
+            &#10095;
+          </button>
+        )}
+
+        {/* Aspect Ratio Card wrapper (9:16) */}
+        <div className="story-viewer__card-wrapper">
+          {/* Custom Progress Indicators */}
+          <div className="story-viewer__progress-container">
+            {currentGroup.stories.map((st, idx) => {
+              let widthPercent = 0;
+              if (idx < currentSlideIdx) widthPercent = 100;
+              if (idx === currentSlideIdx) widthPercent = progress;
+              return (
+                <div key={st.id} className="story-viewer__progress-bar">
+                  <div
+                    className="story-viewer__progress-fill"
+                    style={{ width: `${widthPercent}%` }}
+                  />
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Story Viewer Header inside card */}
+          <header className="story-viewer__header">
+            <div className="story-viewer__user">
+              <img
+                src={currentGroup.avatar_url || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100"}
+                alt={currentGroup.username}
+                className="story-viewer__avatar"
+              />
+              <div style={{ display: "flex", flexDirection: "column" }}>
+                <span className="story-viewer__username">{currentGroup.username}</span>
+                <span className="story-viewer__time">
+                  {new Date(currentSlide.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                </span>
+              </div>
             </div>
-          </div>
-          
-          <div className="story-viewer__controls">
-            {currentSlide.audio_url && (
-              <button
-                className="story-viewer__btn"
-                onClick={() => setIsMuted(!isMuted)}
-                title={isMuted ? "Unmute" : "Mute"}
-              >
-                {isMuted ? "🔇" : "🔊"}
-              </button>
-            )}
-            <button className="story-viewer__btn" onClick={onClose}>&times;</button>
-          </div>
-        </header>
+            
+            <div className="story-viewer__controls">
+              {currentSlide.audio_url && (
+                <button
+                  className="story-viewer__btn"
+                  onClick={() => setIsMuted(!isMuted)}
+                  title={isMuted ? "Unmute" : "Mute"}
+                >
+                  {isMuted ? "🔇" : "🔊"}
+                </button>
+              )}
+              {/* Close viewer button (only visible on small/mobile screens since Sidebar handles close on desktop) */}
+              <button className="story-viewer__btn" onClick={onClose} title="Đóng">&times;</button>
+            </div>
+          </header>
 
-        {/* Story Viewer Body (Click triggers mousedown/hold pausing) */}
-        <div
-          className="story-viewer__body"
-          onMouseDown={() => setIsPaused(true)}
-          onMouseUp={() => setIsPaused(false)}
-          onMouseLeave={() => setIsPaused(false)}
-          onTouchStart={() => setIsPaused(true)}
-          onTouchEnd={() => setIsPaused(false)}
-        >
-          {/* Nav overlay buttons */}
-          <div className="story-viewer__nav-trigger story-viewer__nav-trigger--prev" onClick={(e) => {
-            e.stopPropagation();
-            handlePrevSlide();
-          }} />
-          <div className="story-viewer__nav-trigger story-viewer__nav-trigger--next" onClick={(e) => {
-            e.stopPropagation();
-            handleNextSlide();
-          }} />
+          {/* Story Image display */}
+          <div
+            className="story-viewer__body"
+            onMouseDown={() => setIsPaused(true)}
+            onMouseUp={() => setIsPaused(false)}
+            onMouseLeave={() => setIsPaused(false)}
+            onTouchStart={() => setIsPaused(true)}
+            onTouchEnd={() => setIsPaused(false)}
+          >
+            {/* Hidden navigation click overlays for Mobile/Tablet */}
+            <div className="story-viewer__nav-trigger story-viewer__nav-trigger--prev" onClick={(e) => {
+              e.stopPropagation();
+              handlePrevSlide();
+            }} />
+            <div className="story-viewer__nav-trigger story-viewer__nav-trigger--next" onClick={(e) => {
+              e.stopPropagation();
+              handleNextSlide();
+            }} />
 
-          <img
-            src={currentSlide.media_url}
-            alt="Story background"
-            className="story-viewer__img"
-            draggable={false}
-          />
+            <img
+              src={currentSlide.media_url}
+              alt="Story background"
+              className="story-viewer__img"
+              draggable={false}
+            />
 
-          {/* Floating stickers and caption */}
-          <div className="story-viewer__meta">
-            {/* Spinning Vinyl Sticker */}
-            {currentSlide.audio_url && (
-              <div className="music-sticker">
-                <div className="music-sticker__disc-container">
-                  <div className={`music-sticker__disc ${!isPaused ? "music-sticker__disc--playing" : ""}`}>
-                    <div className="music-sticker__disc-groove">
-                      <img
-                        src="https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=50"
-                        alt="cover"
-                        className="music-sticker__disc-cover"
-                      />
+            {/* Captions and stickers */}
+            <div className="story-viewer__meta">
+              {/* Spinning Vinyl Sticker */}
+              {currentSlide.audio_url && (
+                <div className="music-sticker">
+                  <div className="music-sticker__disc-container">
+                    <div className={`music-sticker__disc ${!isPaused ? "music-sticker__disc--playing" : ""}`}>
+                      <div className="music-sticker__disc-groove">
+                        <img
+                          src={currentSlide.audio_url ? "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=50" : ""}
+                          alt="cover"
+                          className="music-sticker__disc-cover"
+                        />
+                      </div>
+                      <div className="music-sticker__disc-pin" />
                     </div>
-                    <div className="music-sticker__disc-pin" />
+                  </div>
+                  <div className="music-sticker__info">
+                    <span className="music-sticker__title">{currentSlide.audio_title || "Unknown Song"}</span>
+                    <span className="music-sticker__artist">{currentSlide.audio_artist || "Unknown Artist"}</span>
                   </div>
                 </div>
-                <div className="music-sticker__info">
-                  <span className="music-sticker__title">{currentSlide.audio_title || "Unknown Song"}</span>
-                  <span className="music-sticker__artist">{currentSlide.audio_artist || "Unknown Artist"}</span>
-                </div>
-              </div>
-            )}
+              )}
 
-            {currentSlide.caption && (
-              <p className="story-viewer__caption">{currentSlide.caption}</p>
-            )}
+              {currentSlide.caption && (
+                <p className="story-viewer__caption">{currentSlide.caption}</p>
+              )}
+            </div>
           </div>
         </div>
 
-        {/* Footer Quick replies & emoji reactions */}
-        <footer className="story-viewer__footer" onClick={e => e.stopPropagation()}>
+        {/* Footer Quick replies box positioned perfectly under the story card */}
+        <div className="story-viewer__bottom-reply" onClick={e => e.stopPropagation()}>
           <div className="story-viewer__reactions">
             {["❤️", "😂", "😮", "😢", "👏", "🔥"].map((emoji) => (
               <button
@@ -336,7 +414,7 @@ export function StoryViewerModal({ groups, initialGroupIndex, onClose }: StoryVi
           <form className="story-viewer__reply-form" onSubmit={handleTextReplySubmit}>
             <input
               type="text"
-              placeholder={`Trả lời ${currentGroup.username}...`}
+              placeholder={`Gửi phản hồi cho ${currentGroup.username}...`}
               className="story-viewer__reply-input"
               value={replyText}
               onChange={e => setReplyText(e.target.value)}
@@ -352,8 +430,9 @@ export function StoryViewerModal({ groups, initialGroupIndex, onClose }: StoryVi
               </button>
             )}
           </form>
-        </footer>
+        </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

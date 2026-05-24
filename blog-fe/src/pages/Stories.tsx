@@ -1,0 +1,603 @@
+// src/pages/Stories.tsx
+import { useEffect, useState, useRef } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import { useAuth } from "../contexts/AuthContext";
+import { storyApi, type UserStoriesGroup } from "../api/story.api";
+import { createConversation, sendMessage } from "../api/chat.api";
+import { StoryCreatorModal } from "../components/StoryCreatorModal";
+import { showToast } from "../components/Toast";
+import "../styles/Stories.css";
+
+export default function StoriesPage() {
+  const { profile } = useAuth();
+  const nav = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  const [groups, setGroups] = useState<UserStoriesGroup[]>([]);
+  const [currentGroupIdx, setCurrentGroupIdx] = useState<number>(0);
+  const [currentSlideIdx, setCurrentSlideIdx] = useState<number>(0);
+  const [isCreatorOpen, setIsCreatorOpen] = useState(false);
+
+  const currentGroup = groups[currentGroupIdx];
+  const currentSlide = currentGroup?.stories[currentSlideIdx];
+
+  // Audio Playback settings
+  const [isMuted, setIsMuted] = useState(false);
+  const audioPlayerRef = useRef<HTMLAudioElement | null>(null);
+
+  // Time progress bar settings (15 seconds display duration)
+  const duration = 15000; // 15 seconds
+  const [progress, setProgress] = useState(0);
+  const [isPaused, setIsPaused] = useState(false);
+  const progressIntervalRef = useRef<number | null>(null);
+  const startTimeRef = useRef<number>(0);
+  const elapsedTimeRef = useRef<number>(0);
+
+  // Quick Reply text input
+  const [replyText, setReplyText] = useState("");
+  const [sendingReply, setSendingReply] = useState(false);
+
+  // Load all stories from API
+  const fetchStories = async () => {
+    try {
+      const res = await storyApi.getStories();
+      if (res.data?.data) {
+        const fetchedGroups = res.data.data;
+        setGroups(fetchedGroups);
+
+        // Determine which story group to highlight based on URL query param
+        const userIdParam = searchParams.get("userId");
+        if (userIdParam && fetchedGroups.length > 0) {
+          const matchIdx = fetchedGroups.findIndex((g: UserStoriesGroup) => g.user_id === userIdParam);
+          if (matchIdx !== -1) {
+            setCurrentGroupIdx(matchIdx);
+            setCurrentSlideIdx(0);
+            return;
+          }
+        }
+        
+        // Default to first group if no match or parameter
+        if (fetchedGroups.length > 0) {
+          setCurrentGroupIdx(0);
+          setCurrentSlideIdx(0);
+        }
+      }
+    } catch (err) {
+      console.error("Failed to load stories:", err);
+      showToast("Không thể tải tin mới.", "error");
+    }
+  };
+
+  useEffect(() => {
+    fetchStories();
+  }, []);
+
+  // Sync index with query parameters when URL updates
+  useEffect(() => {
+    const userIdParam = searchParams.get("userId");
+    if (userIdParam && groups.length > 0) {
+      const matchIdx = groups.findIndex((g) => g.user_id === userIdParam);
+      if (matchIdx !== -1 && matchIdx !== currentGroupIdx) {
+        setCurrentGroupIdx(matchIdx);
+        setCurrentSlideIdx(0);
+      }
+    }
+  }, [searchParams, groups]);
+
+  // Mark story as read when it displays
+  const markAsRead = async (storyId: string) => {
+    try {
+      await storyApi.markAsSeen(storyId);
+    } catch (err) {
+      console.error("Failed to mark story as seen:", err);
+    }
+  };
+
+  useEffect(() => {
+    if (currentSlide) {
+      markAsRead(currentSlide.id);
+      resetProgress();
+      setupAudio();
+    }
+  }, [currentGroupIdx, currentSlideIdx]);
+
+  const resetProgress = () => {
+    if (progressIntervalRef.current) {
+      window.clearInterval(progressIntervalRef.current);
+    }
+    setProgress(0);
+    elapsedTimeRef.current = 0;
+    startTimeRef.current = Date.now();
+    setIsPaused(false);
+  };
+
+  // Timer loop for progress bar
+  useEffect(() => {
+    if (isPaused) {
+      if (progressIntervalRef.current) {
+        window.clearInterval(progressIntervalRef.current);
+      }
+      return;
+    }
+
+    startTimeRef.current = Date.now() - elapsedTimeRef.current;
+    
+    progressIntervalRef.current = window.setInterval(() => {
+      const elapsed = Date.now() - startTimeRef.current;
+      elapsedTimeRef.current = elapsed;
+      
+      const percent = Math.min((elapsed / duration) * 100, 100);
+      setProgress(percent);
+
+      if (elapsed >= duration) {
+        handleNextSlide();
+      }
+    }, 100);
+
+    return () => {
+      if (progressIntervalRef.current) {
+        window.clearInterval(progressIntervalRef.current);
+      }
+    };
+  }, [isPaused, currentGroupIdx, currentSlideIdx]);
+
+  // Audio elements config
+  const setupAudio = () => {
+    // Stop old audio player
+    if (audioPlayerRef.current) {
+      audioPlayerRef.current.pause();
+      audioPlayerRef.current = null;
+    }
+
+    if (currentSlide?.audio_url) {
+      const audio = new Audio(currentSlide.audio_url);
+      audio.loop = true;
+      audio.volume = isMuted ? 0 : 0.4;
+      
+      if (!isPaused) {
+        audio.play().catch(e => console.log("Autoplay blocked by browser policy until interaction:", e));
+      }
+      audioPlayerRef.current = audio;
+    }
+  };
+
+  // Synchronize Mute status
+  useEffect(() => {
+    if (audioPlayerRef.current) {
+      audioPlayerRef.current.volume = isMuted ? 0 : 0.4;
+    }
+  }, [isMuted]);
+
+  // Sync Pause/Play with slider freeze states
+  useEffect(() => {
+    if (audioPlayerRef.current) {
+      if (isPaused) {
+        audioPlayerRef.current.pause();
+      } else {
+        audioPlayerRef.current.play().catch(e => console.log(e));
+      }
+    }
+  }, [isPaused]);
+
+  // Destroy audio on close/unmount
+  useEffect(() => {
+    return () => {
+      if (audioPlayerRef.current) {
+        audioPlayerRef.current.pause();
+      }
+      if (progressIntervalRef.current) {
+        window.clearInterval(progressIntervalRef.current);
+      }
+    };
+  }, []);
+
+  const handlePrevSlide = () => {
+    if (currentSlideIdx > 0) {
+      setCurrentSlideIdx(prev => prev - 1);
+    } else if (currentGroupIdx > 0) {
+      // Go to previous user's last story
+      const prevGroup = groups[currentGroupIdx - 1];
+      const prevIdx = currentGroupIdx - 1;
+      setCurrentGroupIdx(prevIdx);
+      setCurrentSlideIdx(prevGroup.stories.length - 1);
+      setSearchParams({ userId: prevGroup.user_id });
+    } else {
+      // Loop back to beginning of current slide
+      resetProgress();
+    }
+  };
+
+  const handleNextSlide = () => {
+    if (currentSlideIdx < currentGroup.stories.length - 1) {
+      setCurrentSlideIdx(prev => prev + 1);
+    } else if (currentGroupIdx < groups.length - 1) {
+      // Go to next user's first story
+      const nextGroup = groups[currentGroupIdx + 1];
+      const nextIdx = currentGroupIdx + 1;
+      setCurrentGroupIdx(nextIdx);
+      setCurrentSlideIdx(0);
+      setSearchParams({ userId: nextGroup.user_id });
+    } else {
+      // Reached the absolute end of all stories, return to home
+      nav("/posts");
+    }
+  };
+
+  const handleReactionSubmit = async (reactContent: string) => {
+    if (!currentSlide) return;
+    setSendingReply(true);
+    setIsPaused(true); // Pause viewer while replying
+
+    try {
+      // 1. Get or Create direct chat room with the story author
+      const room = await createConversation({
+        type: "direct",
+        participant_ids: [currentSlide.user_id]
+      });
+
+      if (!room || !room.id) throw new Error("Failed to get room ID");
+
+      // 2. Format custom Story reply message
+      const formattedContent = `${reactContent} \n\n[Phản hồi tin của bạn: ${currentSlide.media_url}]`;
+
+      // 3. Send message
+      await sendMessage({
+        conversation_id: room.id,
+        type: "text",
+        content: formattedContent
+      });
+
+      showToast("Đã gửi tin nhắn cảm xúc tới chat!", "success");
+      setReplyText("");
+    } catch (err) {
+      console.error(err);
+      showToast("Không thể gửi phản hồi.", "error");
+    } finally {
+      setSendingReply(false);
+      setIsPaused(false); // Resume story slider
+    }
+  };
+
+  const handleTextReplySubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!replyText.trim()) return;
+    handleReactionSubmit(replyText);
+  };
+
+  const handleSelectUserFromSidebar = (idx: number, userId: string) => {
+    setCurrentGroupIdx(idx);
+    setCurrentSlideIdx(0);
+    setSearchParams({ userId });
+  };
+
+  const handlePublishSuccess = () => {
+    setIsCreatorOpen(false);
+    fetchStories();
+  };
+
+  // Find if current user has any active story
+  const myGroup = groups.find(g => g.user_id === profile?.id);
+
+  return (
+    <div className="story-viewer-overlay" style={{ position: "relative", height: "100vh", zIndex: 1 }}>
+      {/* Side User List List (Sidebar) */}
+      <div className="story-viewer__sidebar">
+        <div className="story-viewer__sidebar-header">
+          <div className="story-viewer__sidebar-header-top">
+            <button className="story-viewer__sidebar-close" onClick={() => nav("/posts")} title="Quay lại">
+              &larr;
+            </button>
+            <span className="story-viewer__sidebar-logo">Writeful Tin</span>
+          </div>
+          <h2 className="story-viewer__sidebar-title">Tin</h2>
+        </div>
+
+        <div className="story-viewer__sidebar-list">
+          {/* Create Story Trigger */}
+          <div 
+            className="story-viewer__sidebar-subtitle" 
+            style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}
+          >
+            <span>Tin của bạn</span>
+            <button 
+              onClick={() => setIsCreatorOpen(true)}
+              style={{
+                background: "rgba(0, 149, 246, 0.2)",
+                color: "#0095f6",
+                border: "none",
+                borderRadius: "50%",
+                width: "28px",
+                height: "28px",
+                fontSize: "16px",
+                fontWeight: "bold",
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                transition: "background-color 0.2s"
+              }}
+              title="Tạo tin mới"
+            >
+              +
+            </button>
+          </div>
+
+          {myGroup ? (
+            <div
+              className={`story-viewer__sidebar-item ${groups[currentGroupIdx]?.user_id === profile?.id ? "story-viewer__sidebar-item--active" : ""}`}
+              onClick={() => {
+                const idx = groups.findIndex(g => g.user_id === profile?.id);
+                if (idx !== -1) handleSelectUserFromSidebar(idx, profile?.id || "");
+              }}
+            >
+              <div className="story-viewer__sidebar-avatar-ring story-viewer__sidebar-avatar-ring--read">
+                <img
+                  src={profile?.avatar_url || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100"}
+                  alt="Your story"
+                  className="story-viewer__sidebar-avatar"
+                />
+              </div>
+              <div className="story-viewer__sidebar-item-meta">
+                <span className="story-viewer__sidebar-username">Tin của bạn</span>
+                <span className="story-viewer__sidebar-time">Xem tin của bạn</span>
+              </div>
+            </div>
+          ) : (
+            <div
+              className="story-viewer__sidebar-item"
+              onClick={() => setIsCreatorOpen(true)}
+              style={{ opacity: 0.8 }}
+            >
+              <div className="story-viewer__sidebar-avatar-ring story-viewer__sidebar-avatar-ring--read">
+                <img
+                  src={profile?.avatar_url || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100"}
+                  alt="Your story"
+                  className="story-viewer__sidebar-avatar"
+                />
+              </div>
+              <div className="story-viewer__sidebar-item-meta">
+                <span className="story-viewer__sidebar-username">Tạo tin mới</span>
+                <span className="story-viewer__sidebar-time">Chia sẻ ảnh hoặc viết gì đó</span>
+              </div>
+            </div>
+          )}
+
+          <div style={{ margin: "12px 0", borderBottom: "1px solid rgba(255,255,255,0.08)" }} />
+
+          <span className="story-viewer__sidebar-subtitle">Tất cả tin</span>
+          {groups.length === 0 ? (
+            <div style={{ padding: "16px", textAlign: "center", color: "rgba(255,255,255,0.4)", fontSize: "14px" }}>
+              Chưa có tin nào được đăng.
+            </div>
+          ) : (
+            groups.map((group, idx) => {
+              const isActiveUser = currentGroupIdx === idx;
+              const groupLatestSlide = group.stories[group.stories.length - 1];
+              
+              return (
+                <div
+                  key={group.user_id}
+                  className={`story-viewer__sidebar-item ${isActiveUser ? "story-viewer__sidebar-item--active" : ""}`}
+                  onClick={() => handleSelectUserFromSidebar(idx, group.user_id)}
+                >
+                  <div className={`story-viewer__sidebar-avatar-ring ${group.has_unread ? "story-viewer__sidebar-avatar-ring--unread" : "story-viewer__sidebar-avatar-ring--read"}`}>
+                    <img
+                      src={group.avatar_url || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100"}
+                      alt={group.username}
+                      className="story-viewer__sidebar-avatar"
+                    />
+                  </div>
+                  <div className="story-viewer__sidebar-item-meta">
+                    <span className="story-viewer__sidebar-username">{group.username}</span>
+                    {groupLatestSlide && (
+                      <span className="story-viewer__sidebar-time">
+                        {new Date(groupLatestSlide.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+      </div>
+
+      {/* Main black viewer screen */}
+      <div className="story-viewer__main">
+        {groups.length === 0 ? (
+          <div style={{ textAlign: "center", padding: "40px" }}>
+            <div style={{ fontSize: "64px", marginBottom: "20px" }}>📱</div>
+            <h3 style={{ fontSize: "20px", fontWeight: "600", marginBottom: "8px" }}>Kho lưu trữ trống</h3>
+            <p style={{ color: "rgba(255,255,255,0.5)", fontSize: "14px", marginBottom: "24px" }}>Hãy là người đầu tiên đăng tải tin mới!</p>
+            <button className="btn btn--primary" onClick={() => setIsCreatorOpen(true)}>
+              + Tạo tin ngay
+            </button>
+          </div>
+        ) : (
+          <>
+            {/* Floating Chevrons outside the Card wrapper */}
+            {(currentGroupIdx > 0 || currentSlideIdx > 0) && (
+              <button
+                type="button"
+                className="story-viewer__nav-btn story-viewer__nav-btn--prev"
+                onClick={handlePrevSlide}
+              >
+                &#10094;
+              </button>
+            )}
+
+            {(currentGroupIdx < groups.length - 1 || currentSlideIdx < currentGroup.stories.length - 1) && (
+              <button
+                type="button"
+                className="story-viewer__nav-btn story-viewer__nav-btn--next"
+                onClick={handleNextSlide}
+              >
+                &#10095;
+              </button>
+            )}
+
+            {/* Aspect Ratio Card wrapper (9:16) */}
+            <div className="story-viewer__card-wrapper">
+              {/* Custom Progress Indicators */}
+              <div className="story-viewer__progress-container">
+                {currentGroup?.stories.map((st, idx) => {
+                  let widthPercent = 0;
+                  if (idx < currentSlideIdx) widthPercent = 100;
+                  if (idx === currentSlideIdx) widthPercent = progress;
+                  return (
+                    <div key={st.id} className="story-viewer__progress-bar">
+                      <div
+                        className="story-viewer__progress-fill"
+                        style={{ width: `${widthPercent}%` }}
+                      />
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Story Viewer Header inside card */}
+              <header className="story-viewer__header">
+                <div className="story-viewer__user">
+                  <img
+                    src={currentGroup?.avatar_url || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100"}
+                    alt={currentGroup?.username}
+                    className="story-viewer__avatar"
+                  />
+                  <div style={{ display: "flex", flexDirection: "column" }}>
+                    <span className="story-viewer__username">{currentGroup?.username}</span>
+                    <span className="story-viewer__time">
+                      {currentSlide && new Date(currentSlide.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                  </div>
+                </div>
+                
+                <div className="story-viewer__controls">
+                  {currentSlide?.audio_url && (
+                    <button
+                      className="story-viewer__btn"
+                      onClick={() => setIsMuted(!isMuted)}
+                      title={isMuted ? "Bật âm thanh" : "Tắt âm thanh"}
+                    >
+                      {isMuted ? "🔇" : "🔊"}
+                    </button>
+                  )}
+                  {/* Play/Pause control status indicator */}
+                  <button
+                    className="story-viewer__btn"
+                    onClick={() => setIsPaused(!isPaused)}
+                    title={isPaused ? "Phát tin" : "Tạm dừng"}
+                  >
+                    {isPaused ? "▶️" : "⏸️"}
+                  </button>
+                </div>
+              </header>
+
+              {/* Story Image display */}
+              <div
+                className="story-viewer__body"
+                onMouseDown={() => setIsPaused(true)}
+                onMouseUp={() => setIsPaused(false)}
+                onMouseLeave={() => setIsPaused(false)}
+                onTouchStart={() => setIsPaused(true)}
+                onTouchEnd={() => setIsPaused(false)}
+              >
+                {/* Hidden navigation click overlays for Mobile/Tablet */}
+                <div className="story-viewer__nav-trigger story-viewer__nav-trigger--prev" onClick={(e) => {
+                  e.stopPropagation();
+                  handlePrevSlide();
+                }} />
+                <div className="story-viewer__nav-trigger story-viewer__nav-trigger--next" onClick={(e) => {
+                  e.stopPropagation();
+                  handleNextSlide();
+                }} />
+
+                {currentSlide && (
+                  <img
+                    src={currentSlide.media_url}
+                    alt="Story background"
+                    className="story-viewer__img"
+                    draggable={false}
+                  />
+                )}
+
+                {/* Captions and stickers */}
+                <div className="story-viewer__meta">
+                  {/* Spinning Vinyl Sticker */}
+                  {currentSlide?.audio_url && (
+                    <div className="music-sticker">
+                      <div className="music-sticker__disc-container">
+                        <div className={`music-sticker__disc ${!isPaused ? "music-sticker__disc--playing" : ""}`}>
+                          <div className="music-sticker__disc-groove">
+                            <img
+                              src="https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=50"
+                              alt="cover"
+                              className="music-sticker__disc-cover"
+                            />
+                          </div>
+                          <div className="music-sticker__disc-pin" />
+                        </div>
+                      </div>
+                      <div className="music-sticker__info">
+                        <span className="music-sticker__title">{currentSlide.audio_title || "Unknown Song"}</span>
+                        <span className="music-sticker__artist">{currentSlide.audio_artist || "Unknown Artist"}</span>
+                      </div>
+                    </div>
+                  )}
+
+                  {currentSlide?.caption && (
+                    <p className="story-viewer__caption">{currentSlide.caption}</p>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Footer Quick replies box positioned perfectly under the story card */}
+            <div className="story-viewer__bottom-reply" onClick={e => e.stopPropagation()}>
+              <div className="story-viewer__reactions">
+                {["👍", "❤️", "😆", "😮", "😢", "😡"].map((emoji) => (
+                  <button
+                    key={emoji}
+                    type="button"
+                    className="story-viewer__reaction-btn"
+                    onClick={() => handleReactionSubmit(emoji)}
+                    disabled={sendingReply}
+                  >
+                    {emoji}
+                  </button>
+                ))}
+              </div>
+
+              <form className="story-viewer__reply-form" onSubmit={handleTextReplySubmit}>
+                <input
+                  type="text"
+                  placeholder={`Gửi phản hồi cho ${currentGroup?.username}...`}
+                  className="story-viewer__reply-input"
+                  value={replyText}
+                  onChange={e => setReplyText(e.target.value)}
+                  disabled={sendingReply}
+                />
+                {replyText.trim() && (
+                  <button
+                    type="submit"
+                    className="story-viewer__reply-send"
+                    disabled={sendingReply}
+                  >
+                    Gửi
+                  </button>
+                )}
+              </form>
+            </div>
+          </>
+        )}
+      </div>
+
+      {/* Creator Modal (mounted inline) */}
+      {isCreatorOpen && (
+        <StoryCreatorModal
+          onClose={() => setIsCreatorOpen(false)}
+          onSuccess={handlePublishSuccess}
+        />
+      )}
+    </div>
+  );
+}

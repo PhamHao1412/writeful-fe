@@ -1,17 +1,17 @@
 // src/components/StoriesBar.tsx
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { storyApi, type UserStoriesGroup } from "../api/story.api";
 import { StoryCreatorModal } from "./StoryCreatorModal";
-import { StoryViewerModal } from "./StoryViewerModal";
 import "../styles/Stories.css";
 
 export function StoriesBar() {
   const { profile } = useAuth();
+  const nav = useNavigate();
   const [groups, setGroups] = useState<UserStoriesGroup[]>([]);
   
   const [isCreatorOpen, setIsCreatorOpen] = useState(false);
-  const [selectedGroupIndex, setSelectedGroupIndex] = useState<number | null>(null);
 
   const fetchStories = async () => {
     try {
@@ -33,11 +33,6 @@ export function StoriesBar() {
     fetchStories();
   };
 
-  const handleViewerClose = () => {
-    setSelectedGroupIndex(null);
-    fetchStories(); // Refresh read states
-  };
-
   // Find if current user has any active story
   const myGroup = groups.find(g => g.user_id === profile?.id);
   const otherGroups = groups.filter(g => g.user_id !== profile?.id);
@@ -47,9 +42,8 @@ export function StoriesBar() {
       {/* Self Story Trigger */}
       <div className="story-item" onClick={() => {
         if (myGroup) {
-          // If already has active stories, open viewer, otherwise open creator
-          const myIdx = groups.findIndex(g => g.user_id === profile?.id);
-          setSelectedGroupIndex(myIdx);
+          // Navigate to dedicated Stories page and highlight self
+          nav(`/stories?userId=${profile?.id}`);
         } else {
           setIsCreatorOpen(true);
         }
@@ -67,12 +61,11 @@ export function StoriesBar() {
 
       {/* Other Users' Stories */}
       {otherGroups.map((group) => {
-        const globalIdx = groups.findIndex(g => g.user_id === group.user_id);
         return (
           <div
             key={group.user_id}
             className="story-item"
-            onClick={() => setSelectedGroupIndex(globalIdx)}
+            onClick={() => nav(`/stories?userId=${group.user_id}`)}
           >
             <div className={`story-item__avatar-container ${group.has_unread ? "story-item__avatar-container--unread" : "story-item__avatar-container--read"}`}>
               <img
@@ -91,15 +84,6 @@ export function StoriesBar() {
         <StoryCreatorModal
           onClose={() => setIsCreatorOpen(false)}
           onSuccess={handlePublishSuccess}
-        />
-      )}
-
-      {/* Viewer Modal */}
-      {selectedGroupIndex !== null && (
-        <StoryViewerModal
-          groups={groups}
-          initialGroupIndex={selectedGroupIndex}
-          onClose={handleViewerClose}
         />
       )}
     </div>

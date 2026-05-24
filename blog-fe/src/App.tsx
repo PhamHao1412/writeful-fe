@@ -12,13 +12,15 @@ import EditProfilePage from "./pages/EditProfile";
 import UserProfilePage from "./pages/UserProfile";
 import Activity from "./pages/Activity.tsx";
 import Chat from "./pages/Chat";
+import StoriesPage from "./pages/Stories";
 
 export default function App() {
     const location = useLocation();
 
-    // Check if current route is an editor page
-    const isEditor = matchPath("/posts/new", location.pathname) ||
-        matchPath("/posts/:id/edit", location.pathname);
+    // Check if current route is full screen (no global layout wrapper)
+    const isFullPage = matchPath("/posts/new", location.pathname) ||
+        matchPath("/posts/:id/edit", location.pathname) ||
+        location.pathname.startsWith("/stories");
 
     const routes = (
         <Routes>
@@ -37,12 +39,13 @@ export default function App() {
             <Route path="/signup" element={<SignUpPage />} />
             <Route path="/activity" element={<AuthGuard><Activity /></AuthGuard>} />
             <Route path="/chat" element={<AuthGuard><Chat /></AuthGuard>} />
+            <Route path="/stories" element={<AuthGuard><StoriesPage /></AuthGuard>} />
 
             <Route path="*" element={<div>Not found</div>} />
         </Routes>
     );
 
-if (isEditor) {
+    if (isFullPage) {
         return routes;
     }
 
