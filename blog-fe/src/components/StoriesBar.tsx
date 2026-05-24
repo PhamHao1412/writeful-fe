@@ -1,28 +1,17 @@
 // src/components/StoriesBar.tsx
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
-import { storyApi, type UserStoriesGroup } from "../api/story.api";
+import { useStories } from "../contexts/StoriesContext";
 import "../styles/Stories.css";
 
 export function StoriesBar() {
   const { profile } = useAuth();
+  const { groups, refreshStories } = useStories();
   const nav = useNavigate();
-  const [groups, setGroups] = useState<UserStoriesGroup[]>([]);
-
-  const fetchStories = async () => {
-    try {
-      const res = await storyApi.getStories();
-      if (res.data?.data) {
-        setGroups(res.data.data);
-      }
-    } catch (err) {
-      console.error("Failed to load stories:", err);
-    }
-  };
 
   useEffect(() => {
-    fetchStories();
+    refreshStories();
   }, []);
 
   // Find if current user has any active story
@@ -31,42 +20,64 @@ export function StoriesBar() {
 
   return (
     <div className="stories-bar">
-      {/* Self Story Trigger */}
-      <div className="story-item" onClick={() => {
-        if (myGroup) {
-          // Navigate to dedicated Stories page and highlight self
-          nav(`/stories?userId=${profile?.id}`);
-        } else {
-          nav("/stories/create");
-        }
-      }}>
-        <div className="story-item__avatar-container story-item__avatar-container--self">
+      {/* Self Story Creator Card (Facebook-Style First Card) */}
+      <div 
+        className="story-card story-card--creator" 
+        onClick={() => {
+          if (myGroup) {
+            // Navigate to dedicated Stories page and highlight self
+            nav(`/stories?userId=${profile?.id}`);
+          } else {
+            nav("/stories/create");
+          }
+        }}
+      >
+        <div className="story-card__creator-cover-wrap">
           <img
-            src={profile?.avatar_url || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100"}
-            alt="Your story"
-            className="story-item__avatar"
+            src={profile?.avatar_url || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150"}
+            alt="Your avatar cover"
+            className="story-card__creator-cover"
           />
-          {!myGroup && <div className="story-item__add-btn">+</div>}
         </div>
-        <span className="story-item__username">Your Story</span>
+        <div className="story-card__creator-footer">
+          <div className="story-card__creator-add-badge">
+            <span className="story-card__add-plus-icon">+</span>
+          </div>
+          <span className="story-card__creator-text">Create Story</span>
+        </div>
       </div>
 
-      {/* Other Users' Stories */}
+      {/* Other Users' Preview Cards (Facebook-Style Cards) */}
       {otherGroups.map((group) => {
+        // Display the first slide's media_url as card preview background
+        const previewImage = group.stories?.[0]?.media_url || "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=150";
         return (
           <div
             key={group.user_id}
-            className="story-item"
+            className="story-card"
             onClick={() => nav(`/stories?userId=${group.user_id}`)}
           >
-            <div className={`story-item__avatar-container ${group.has_unread ? "story-item__avatar-container--unread" : "story-item__avatar-container--read"}`}>
+            {/* Story slide preview background */}
+            <img
+              src={previewImage}
+              alt="Story Preview"
+              className="story-card__bg-preview"
+            />
+            
+            {/* Dark overlay for text readability */}
+            <div className="story-card__overlay" />
+
+            {/* Small circular avatar in the top-left */}
+            <div className={`story-card__avatar-badge ${group.has_unread ? "story-card__avatar-badge--unread" : "story-card__avatar-badge--read"}`}>
               <img
                 src={group.avatar_url || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100"}
                 alt={group.username}
-                className="story-item__avatar"
+                className="story-card__avatar-img"
               />
             </div>
-            <span className="story-item__username">{group.username}</span>
+
+            {/* Username at the bottom */}
+            <span className="story-card__username-text">{group.username}</span>
           </div>
         );
       })}

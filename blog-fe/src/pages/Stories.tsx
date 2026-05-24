@@ -2,6 +2,7 @@
 import { useEffect, useState, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
+import { useStories } from "../contexts/StoriesContext";
 import { storyApi, type UserStoriesGroup } from "../api/story.api";
 import { createConversation, sendMessage } from "../api/chat.api";
 import { showToast } from "../components/Toast";
@@ -9,6 +10,7 @@ import "../styles/Stories.css";
 
 export default function StoriesPage() {
   const { profile } = useAuth();
+  const { refreshStories } = useStories();
   const nav = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -86,6 +88,27 @@ export default function StoriesPage() {
   const markAsRead = async (storyId: string) => {
     try {
       await storyApi.markAsSeen(storyId);
+      
+      // Update local state immediately for high responsiveness
+      setGroups(prevGroups => {
+        return prevGroups.map(g => {
+          const updatedStories = g.stories.map(s => {
+            if (s.id === storyId) {
+              return { ...s, seen: true };
+            }
+            return s;
+          });
+          
+          return {
+            ...g,
+            stories: updatedStories,
+            has_unread: g.user_id === profile?.id ? false : updatedStories.some(s => !s.seen)
+          };
+        });
+      });
+
+      // Synchronize the global context state so other pages (Home Feed, Chat) get instant read status
+      refreshStories();
     } catch (err) {
       console.error("Failed to mark story as seen:", err);
     }

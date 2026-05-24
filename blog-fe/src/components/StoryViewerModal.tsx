@@ -2,6 +2,7 @@
 import { useEffect, useState, useRef } from "react";
 import { createPortal } from "react-dom";
 import { storyApi, type UserStoriesGroup } from "../api/story.api";
+import { useStories } from "../contexts/StoriesContext";
 import { createConversation, sendMessage } from "../api/chat.api";
 import { showToast } from "./Toast";
 import "../styles/Stories.css";
@@ -13,6 +14,7 @@ interface StoryViewerModalProps {
 }
 
 export function StoryViewerModal({ groups, initialGroupIndex, onClose }: StoryViewerModalProps) {
+  const { refreshStories } = useStories();
   const [currentGroupIdx, setCurrentGroupIdx] = useState(initialGroupIndex);
   const [currentSlideIdx, setCurrentSlideIdx] = useState(0);
   
@@ -39,6 +41,7 @@ export function StoryViewerModal({ groups, initialGroupIndex, onClose }: StoryVi
   const markAsRead = async (storyId: string) => {
     try {
       await storyApi.markAsSeen(storyId);
+      refreshStories();
     } catch (err) {
       console.error("Failed to mark story as seen:", err);
     }
