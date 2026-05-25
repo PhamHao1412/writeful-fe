@@ -58,13 +58,16 @@ export function UserAvatar({
   const isUnread = storyGroup?.has_unread;
 
   const handleClick = (e: React.MouseEvent) => {
+    // Prevent default anchor link behavior and event propagation to parent containers
+    e.preventDefault();
+    e.stopPropagation();
+
     if (onClickOverride) {
       onClickOverride(e);
       return;
     }
 
     if (hasStory && userId) {
-      e.stopPropagation();
       const rect = e.currentTarget.getBoundingClientRect();
       const menuWidth = 154;
       let leftPos = rect.left + rect.width / 2 - menuWidth / 2;
@@ -79,7 +82,6 @@ export function UserAvatar({
       });
       setIsMenuOpen(true); // Open the options dropdown
     } else if (username) {
-      e.stopPropagation();
       nav(`/users/${username}`);
     }
   };
