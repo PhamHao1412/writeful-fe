@@ -50,7 +50,9 @@ export default function StoriesPage() {
       if (matchIdx !== -1) {
         if (currentGroupIdx !== matchIdx) {
           setCurrentGroupIdx(matchIdx);
-          setCurrentSlideIdx(0);
+          const group = groups[matchIdx];
+          const firstUnreadIdx = group?.stories ? group.stories.findIndex((s) => !s.seen) : -1;
+          setCurrentSlideIdx(firstUnreadIdx !== -1 ? firstUnreadIdx : 0);
         }
         return;
       }
@@ -59,7 +61,9 @@ export default function StoriesPage() {
     // Default to first group if no match or parameter, and we are not yet initialized
     if (currentGroupIdx === null) {
       setCurrentGroupIdx(0);
-      setCurrentSlideIdx(0);
+      const defaultGroup = groups[0];
+      const firstUnreadIdx = defaultGroup?.stories ? defaultGroup.stories.findIndex((s) => !s.seen) : -1;
+      setCurrentSlideIdx(firstUnreadIdx !== -1 ? firstUnreadIdx : 0);
     }
   }, [searchParams, groups, currentGroupIdx]);
 
@@ -330,7 +334,9 @@ export default function StoriesPage() {
 
   const handleSelectUserFromSidebar = (idx: number, userId: string) => {
     setCurrentGroupIdx(idx);
-    setCurrentSlideIdx(0);
+    const group = groups[idx];
+    const firstUnreadIdx = group?.stories ? group.stories.findIndex((s) => !s.seen) : -1;
+    setCurrentSlideIdx(firstUnreadIdx !== -1 ? firstUnreadIdx : 0);
     setSearchParams({ userId });
   };
 
