@@ -23,14 +23,7 @@ export function StoriesBar() {
       {/* Self Story Creator Card (Facebook-Style First Card) */}
       <div 
         className="story-card story-card--creator" 
-        onClick={() => {
-          if (myGroup) {
-            // Navigate to dedicated Stories page and highlight self
-            nav(`/stories?userId=${profile?.id}`);
-          } else {
-            nav("/stories/create");
-          }
-        }}
+        onClick={() => nav("/stories/create")}
       >
         <div className="story-card__creator-cover-wrap">
           <img
@@ -46,6 +39,36 @@ export function StoriesBar() {
           <span className="story-card__creator-text">Create Story</span>
         </div>
       </div>
+
+      {/* Self Active Story Card (Only shown if current user has active stories) */}
+      {myGroup && myGroup.stories && myGroup.stories.length > 0 && (
+        <div
+          className="story-card"
+          onClick={() => nav(`/stories?userId=${profile?.id}`)}
+        >
+          {/* Story slide preview background */}
+          <img
+            src={myGroup.stories[0].media_url || "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=150"}
+            alt="Your Story Preview"
+            className="story-card__bg-preview"
+          />
+          
+          {/* Dark overlay for text readability */}
+          <div className="story-card__overlay" />
+
+          {/* Small circular avatar in the top-left */}
+          <div className={`story-card__avatar-badge ${myGroup.has_unread ? "story-card__avatar-badge--unread" : "story-card__avatar-badge--read"}`}>
+            <img
+              src={myGroup.avatar_url || profile?.avatar_url || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100"}
+              alt="Your Story"
+              className="story-card__avatar-img"
+            />
+          </div>
+
+          {/* Username at the bottom */}
+          <span className="story-card__username-text">Your Story</span>
+        </div>
+      )}
 
       {/* Other Users' Preview Cards (Facebook-Style Cards) */}
       {otherGroups.map((group) => {
